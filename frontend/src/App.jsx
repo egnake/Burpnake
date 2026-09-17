@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   Activity, Target, FileJson, MessageSquare,
@@ -40,10 +40,10 @@ function Sidebar() {
     <div className="w-64 h-screen flex flex-col shrink-0 clay-sidebar relative z-10">
       
       <div className="p-5 border-b border-[var(--color-dark-700)] flex items-center gap-3">
-        <Target className="w-6 h-6" style={{ color: 'var(--color-primary-500)', filter: 'drop-shadow(0 0 4px rgba(255,102,51,0.4))' }} />
+        <img src="/logo.jpg" alt="BurpNake Logo" className="w-8 h-8 rounded-md shadow-[0_0_8px_rgba(255,102,51,0.4)]" />
         <div>
           <span className="text-lg font-bold text-white tracking-tight drop-shadow-md">BurpNake</span>
-          <p className="text-[10px] text-[var(--color-primary-400)] font-semibold uppercase tracking-widest mt-0.5">Pro Edition</p>
+          
         </div>
       </div>
 

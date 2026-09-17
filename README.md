@@ -1,5 +1,5 @@
 ﻿<div align="center">
-  <!-- <img src="docs/logo.png" alt="BurpNake Logo" width="200"/> -->
+  <img src="docs/assets/dashboard.png" alt="BurpNake Logo" width="800"/>
   <h1>BurpNake</h1>
   <p><b>Autonomous AI-Driven Penetration Testing & Bug Bounty Platform</b></p>
 
@@ -32,16 +32,25 @@ It acts as an automated extension of a security researcher's mind, replicating t
 
 ## Screenshots
 
-> **Note:** Screenshots of the live dashboard, AI chain builder, and active vulnerability fuzzing will be added here.
+**Dashboard & System Status**
+![Dashboard Preview](docs/assets/dashboard.png)
+*The command center displaying live traffic, active rulesets, and LLM engine status.*
 
-*   **Dashboard & Live Feed:**
-    <!-- ![Dashboard Preview](link_to_dashboard_image) -->
-    
-*   **AI Chain Builder & Exploit Generation:**
-    <!-- ![AI Chain Builder](link_to_chain_image) -->
+**Findings & Vulnerability Triage**
+![Findings Preview](docs/assets/findings.png)
+*Confirmed vulnerabilities automatically categorized by severity and ready for reporting.*
 
-*   **Autonomous Agent Execution:**
-    <!-- ![Agent Execution](link_to_agent_image) -->
+**Burp Suite Live Connector**
+![Burp Connector Preview](docs/assets/burp_connector.png)
+*The Java-based interceptor directly streaming HTTP traffic from Burp Suite into the AI engine.*
+
+**Request Repeater & Fuzzer**
+![Repeater Preview](docs/assets/repeater.png)
+*Built-in HTTP repeater for manual verification and payload mutation.*
+
+**CVSS v3.1 Calculator**
+![CVSS Calculator Preview](docs/assets/cvss_calculator.png)
+*Integrated vulnerability scoring taxonomy compliant with FIRST standards.*
 
 ---
 

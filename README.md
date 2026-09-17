@@ -1,96 +1,120 @@
-﻿# 🐍 BurpNake v2.5.0 - Autonomous AI Bug Bounty Hunter
+﻿# BurpNake - Autonomous AI Bug Bounty Hunter
 
-> **Bul -> Analiz Et -> Zincirle -> Exploit Et -> PoC Yaz — Tamamen Otonom**
+BurpNake is an advanced, AI-driven autonomous penetration testing and bug bounty platform. Unlike traditional static scanners, BurpNake leverages Large Language Models (LLMs) to perform semantic analysis of HTTP traffic, execute state-aware fuzzing, dynamically chain vulnerabilities, and automatically write Proof-of-Concept (PoC) scripts.
 
-BurpNake, sıradan bir proxy veya statik tarayıcı değildir. O, bir Bug Bounty Hunter'ın zihinsel süreçlerini (Chain-of-Thought) taklit eden, **State-Machine Fuzzing** yapabilen, **DOM Recon** ile hedefin haritasını çıkaran ve bulduğu açıkları **AI Chain Agent** ile birleştirip kritik zafiyetlere (RCE, ATO, SSRF) dönüştüren elit bir siber güvenlik yapay zekasıdır.
+## Core Capabilities
 
----
+*   **Semantic DOM Reconnaissance:** Parses HTML Abstract Syntax Trees (AST) using BeautifulSoup and lxml to extract hidden inputs, developer comments, and inline API endpoints, eliminating LLM hallucination during payload generation.
+*   **Multi-Step Stateful Fuzzing:** Capable of executing complex, multi-stage attacks (e.g., account creation followed by privilege escalation). It maintains session state and cookies across HTTP requests dynamically.
+*   **Dynamic Vulnerability Chaining:** An independent background AI agent continuously evaluates low-severity findings, querying the LLM to logically chain them into critical impacts (e.g., Self-XSS + Open Redirect into Account Takeover).
+*   **Blind Vulnerability Differ:** Implements differential analysis on word counts, response lengths, and time delays to accurately detect blind injection vulnerabilities (Blind SQLi, Blind SSRF) without relying on visible errors.
+*   **Robust LLM Gateway:** Built-in failover mechanism supporting local offline models (Ollama), cloud models (Gemini), and free open-source proxies (G4F).
 
-## 🚀 Yeni Neler Var? (v2.5 Mega Update)
+## System Architecture
 
-1. **Akıllı DOM Analizi (Zero-Blindness Recon):** Hedefin HTTP yanıtlarını düz metin olarak okumaz. eautifulsoup4 ile HTML ağacını (AST) çıkartıp gizli <input type="hidden"> formlarını, geliştirici yorumlarını (<!-- -->) ve satır içi JS değişkenlerindeki (Inline API keys/endpoints) gizli API rotalarını keşfeder.
-2. **Çok Adımlı (Multi-Step) Makro Saldırıları:** IDOR veya yetki yükseltme (Privilege Escalation) gibi açıklar için Ajan, tek bir istek yerine bir "İstek Zinciri (Macro)" kurabilir. Birinci adımdaki JSON sonucunu (id=45) çekip ikinci adımdaki URL'ye enjekte eder. State ve session çerezleri otomatik korunur.
-3. **Dinamik Zafiyet Zincirleme (AI Chain Agent):** Arka planda çalışan alt-ajan, sistemde bulunan düşük seviyeli (Low/Info) zafiyetleri gruplar ve LLM'e sorar: *"Bir Self-XSS ve Open Redirect bulduk, bunları birleştirip Account Takeover (ATO) yaratabilir miyiz?"* Başarılı olursa otomatik Python PoC scriptini yazar.
-4. **Kör Zafiyet Avcısı (Response Differ):** Ekrana hata basmayan (Blind SQLi, Blind SSRF) açıkları tespit etmek için kelime sayısı (word count), yanıt boyutu ve saniye bazlı gecikme (time delay) farklılıklarını diferansiyel analize sokar.
+1.  **Traffic Interception:** A custom Java extension intercepts traffic from Burp Suite and forwards it to the BurpNake backend.
+2.  **Triage & Passive Analysis:** The backend evaluates the traffic against 88 distinct vulnerability patterns and extracts DOM context.
+3.  **Autonomous Agent Loop:** The AI takes control, deciding on the next attack vector, mutating payloads, and sending verification requests.
+4.  **Reporting:** Confirmed vulnerabilities are formatted into HackerOne/Bugcrowd standard markdown reports with functional Python/cURL PoC scripts, streamed in real-time to the React frontend.
 
----
+## Detailed Installation Guide
 
-## 🛠️ Mimari & Çalışma Mantığı
+### Prerequisites
+Before installing BurpNake, ensure your system meets the following requirements:
+*   **Python 3.12** or higher (Required for the backend API and AI agent)
+*   **Node.js 18** or higher (Required to build and run the React frontend)
+*   **Java 11** or higher (Required to load the Burp Suite interceptor extension)
+*   **Docker and Docker Compose** (Optional, but highly recommended for containerized deployment)
 
-`	ext
-Burp Suite (Connector JAR) / HAR Import
-    ↓  POST /api/import/live
-FastAPI Backend (port 8899)
-    ↓  Pasif Analiz (DOM Recon + 88 Vulnerability Pattern)
-Otonom Agent Loop (State-Machine Macro Fuzzer)
-    ↓  Kör Nokta Analizi (Response Differ)
-Zafiyet Zincirleme (AI Chain Builder Sub-Agent)
-    ↓  Açık doğrulandı! (Critical/High)
-HackerOne / Bugcrowd Raporu + PoC Scripti -> Dashboard
-`
+### Method 1: Docker Installation (Recommended)
+The fastest and most reliable way to deploy the entire stack is using Docker Compose.
 
----
+1.  **Clone the repository:**
+    `ash
+    git clone https://github.com/egnake/Burpnake.git
+    cd Burpnake
+    `
+2.  **Prepare the environment variables:**
+    `ash
+    cp .env.example .env
+    `
+    Open the .env file in a text editor and configure your preferred LLM credentials (e.g., GEMINI_API_KEY or OLLAMA_BASE_URL).
+3.  **Build and start the containers:**
+    `ash
+    docker-compose up --build
+    `
+4.  **Access the application:**
+    *   Dashboard: http://localhost:3000
+    *   Backend API Docs: http://localhost:8899/docs
 
-## 🚀 Hızlı Başlangıç
+### Method 2: Manual / Local Installation
 
-### Gereksinimler
-- Python 3.12+
-- Node.js 18+ (Frontend için)
-- API Key (OpenAI, Gemini, Anthropic) veya Yerel **Ollama**
+If you prefer to run the applications directly on your host machine, follow these steps.
 
-### 1. Backend Kurulumu
+#### 1. Backend Setup (FastAPI)
+1.  Clone the repository and navigate to the root directory.
+2.  Create a virtual Python environment to isolate dependencies:
+    `ash
+    python -m venv venv
+    `
+3.  Activate the virtual environment:
+    *   **Windows:** .\venv\Scripts\activate
+    *   **Linux / macOS:** source venv/bin/activate
+4.  Install the required Python packages:
+    `ash
+    pip install -r requirements.txt
+    `
+5.  Configure the environment variables:
+    *   Copy the .env.example file and rename it to .env.
+    *   Edit .env to include your API keys.
+6.  Start the backend server:
+    `ash
+    python run.py
+    `
+    The backend API will start on http://localhost:8899.
 
-`ash
-git clone https://github.com/yourusername/burpnake.git
-cd burpnake
-python -m venv venv
-# Windows
-.\venv\Scripts\activate
-# Linux/Mac
-# source venv/bin/activate
+#### 2. Frontend Setup (React + Vite)
+1.  Open a new terminal window and navigate to the rontend directory:
+    `ash
+    cd frontend
+    `
+2.  Install the Node.js dependencies:
+    `ash
+    npm install
+    `
+3.  Start the frontend development server:
+    `ash
+    npm run dev
+    `
+    The frontend dashboard will start on http://localhost:3000.
 
-pip install -r requirements.txt
-# .env dosyasını ayarlayın (GEMINI_API_KEY veya Ollama)
-python run.py
-`
+#### 3. Burp Suite Extension Setup
+BurpNake relies on a custom Burp Suite extension to capture HTTP traffic in real-time.
+1.  Ensure Java is installed and Burp Suite is running.
+2.  In Burp Suite, navigate to the **Extensions** tab, then select the **Installed** sub-tab.
+3.  Click the **Add** button.
+4.  Set the **Extension type** to **Java**.
+5.  In the **Extension file (.jar)** field, click **Select file...** and navigate to the cloned repository. Select connector/BurpNakeConnector.jar.
+6.  Click **Next**. The extension will load, and the output console should confirm that it has connected to the BurpNake backend on port 8899.
 
-### 2. Frontend Kurulumu (Yeni Terminal)
+## LLM Configuration Guide
 
-`ash
-cd frontend
-npm install
-npm run dev
-`
+BurpNake requires a Large Language Model to operate its autonomous agents. You must configure at least one provider in your .env file.
 
-### 3. Docker (Tek Komutla Başlat)
-`ash
-docker compose up --build
-`
-- Dashboard: http://localhost:3000
-- API Docs: http://localhost:8899/docs
+*   **Ollama (Local & Private):** Best for sensitive targets where data cannot leave your machine.
+    1. Install Ollama on your system.
+    2. Pull a capable coding model (e.g., ollama pull qwen2.5-coder:14b or ollama pull llama3).
+    3. Set OLLAMA_BASE_URL=http://localhost:11434 in your .env.
+*   **Gemini (Cloud):** Highly recommended for complex DOM reasoning and long-context capabilities.
+    1. Obtain an API key from Google AI Studio.
+    2. Set GEMINI_API_KEY=your_api_key_here in your .env.
+*   **G4F (Free Fallback):** If you do not have access to an API key, you can route requests through free community providers.
+    1. Set G4F_ENABLED=true in your .env. Note that stability may vary based on provider availability.
 
----
+## Legal Disclaimer
 
-## 🧠 LLM Motorları
+BurpNake is developed exclusively for authorized penetration testing and official bug bounty programs. The tool adheres to strictly configured scope rules to prevent unintended or unauthorized testing. The developers assume no liability and are not responsible for any misuse, damage, or legal consequences caused by the deployment of this software.
 
-Sistem esnek bir LLM Gateway (Ağ Geçidi) kullanır. Context Window dolduğunda veya API Rate Limit aşıldığında diğerine geçer:
-- **Ollama (Yerel/Offline):** qwen2.5-coder:14b veya llama3 önerilir. Gizlilik kritik hedefler için.
-- **Gemini:** gemini-1.5-pro (Gelişmiş DOM analizi ve zincirleme için idealdir).
-- **G4F (Ücretsiz):** API anahtarınız yoksa G4F_ENABLED=true yaparak ücretsiz LLM havuzunu kullanabilirsiniz.
+## License
 
----
-
-## ⚔️ Gelişmiş Özellikler & Savunma Atlatma
-- **OOB (Out-of-Band) Entegrasyonu:** SSRF ve Blind RCE için Burp Collaborator veya Interactsh payload'larını asenkron olarak doğrular.
-- **WAF/CDN Bypass Tespiti:** Ajan 403 Forbidden yediğinde pes etmez; HTTP Parameter Pollution (HPP), Null Byte Enjeksiyonu, Chunked Encoding gibi tekniklere (Evasion) başvurur.
-- **Kümülatif Mutasyon (Cumulative Fuzzing):** Ajanın gönderdiği payload'lar hedeften gelen yanıta göre sürekli evrim geçirir (Genetic Fuzzing yaklaşımı).
-
----
-
-## ⚖️ Yasal Uyarı
-
-> [!WARNING]
-> BurpNake, **yalnızca yetkili penetrasyon testleri ve resmi Bug Bounty programları** (HackerOne, Bugcrowd, vb.) için geliştirilmiştir. Hedefin belirlediği Scope (Kapsam) dışındaki domainlere saldırmamak üzere kodlanmıştır (scope_manager.py). Geliştiriciler yetkisiz veya yasadışı kullanımdan doğacak sonuçlardan sorumlu değildir.
-
----
-**Lisans:** MIT License
+MIT License

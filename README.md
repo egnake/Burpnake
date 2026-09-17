@@ -1,6 +1,49 @@
-﻿# BurpNake - Autonomous AI Bug Bounty Hunter
+﻿<div align="center">
+  <!-- <img src="docs/logo.png" alt="BurpNake Logo" width="200"/> -->
+  <h1>BurpNake</h1>
+  <p><b>Autonomous AI-Driven Penetration Testing & Bug Bounty Platform</b></p>
 
-BurpNake is an advanced, AI-driven autonomous penetration testing and bug bounty platform. Unlike traditional static scanners, BurpNake leverages Large Language Models (LLMs) to perform semantic analysis of HTTP traffic, execute state-aware fuzzing, dynamically chain vulnerabilities, and automatically write Proof-of-Concept (PoC) scripts.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+  [![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
+  [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+</div>
+
+<br />
+
+## Table of Contents
+- [Overview](#overview)
+- [Screenshots](#screenshots)
+- [Core Capabilities](#core-capabilities)
+- [System Architecture](#system-architecture)
+- [Detailed Installation Guide](#detailed-installation-guide)
+- [LLM Configuration Guide](#llm-configuration-guide)
+- [Legal Disclaimer](#legal-disclaimer)
+
+---
+
+## Overview
+
+BurpNake is an advanced, AI-driven autonomous penetration testing and bug bounty platform. Unlike traditional static scanners, BurpNake leverages Large Language Models (LLMs) to perform semantic analysis of HTTP traffic, execute state-aware fuzzing, dynamically chain vulnerabilities, and automatically write Proof-of-Concept (PoC) scripts. 
+
+It acts as an automated extension of a security researcher's mind, replicating the chain-of-thought process required to discover complex, multi-stage vulnerabilities.
+
+---
+
+## Screenshots
+
+> **Note:** Screenshots of the live dashboard, AI chain builder, and active vulnerability fuzzing will be added here.
+
+*   **Dashboard & Live Feed:**
+    <!-- ![Dashboard Preview](link_to_dashboard_image) -->
+    
+*   **AI Chain Builder & Exploit Generation:**
+    <!-- ![AI Chain Builder](link_to_chain_image) -->
+
+*   **Autonomous Agent Execution:**
+    <!-- ![Agent Execution](link_to_agent_image) -->
+
+---
 
 ## Core Capabilities
 
@@ -10,12 +53,16 @@ BurpNake is an advanced, AI-driven autonomous penetration testing and bug bounty
 *   **Blind Vulnerability Differ:** Implements differential analysis on word counts, response lengths, and time delays to accurately detect blind injection vulnerabilities (Blind SQLi, Blind SSRF) without relying on visible errors.
 *   **Robust LLM Gateway:** Built-in failover mechanism supporting local offline models (Ollama), cloud models (Gemini), and free open-source proxies (G4F).
 
+---
+
 ## System Architecture
 
 1.  **Traffic Interception:** A custom Java extension intercepts traffic from Burp Suite and forwards it to the BurpNake backend.
 2.  **Triage & Passive Analysis:** The backend evaluates the traffic against 88 distinct vulnerability patterns and extracts DOM context.
 3.  **Autonomous Agent Loop:** The AI takes control, deciding on the next attack vector, mutating payloads, and sending verification requests.
 4.  **Reporting:** Confirmed vulnerabilities are formatted into HackerOne/Bugcrowd standard markdown reports with functional Python/cURL PoC scripts, streamed in real-time to the React frontend.
+
+---
 
 ## Detailed Installation Guide
 
@@ -97,6 +144,8 @@ BurpNake relies on a custom Burp Suite extension to capture HTTP traffic in real
 5.  In the **Extension file (.jar)** field, click **Select file...** and navigate to the cloned repository. Select connector/BurpNakeConnector.jar.
 6.  Click **Next**. The extension will load, and the output console should confirm that it has connected to the BurpNake backend on port 8899.
 
+---
+
 ## LLM Configuration Guide
 
 BurpNake requires a Large Language Model to operate its autonomous agents. You must configure at least one provider in your .env file.
@@ -111,9 +160,13 @@ BurpNake requires a Large Language Model to operate its autonomous agents. You m
 *   **G4F (Free Fallback):** If you do not have access to an API key, you can route requests through free community providers.
     1. Set G4F_ENABLED=true in your .env. Note that stability may vary based on provider availability.
 
+---
+
 ## Legal Disclaimer
 
 BurpNake is developed exclusively for authorized penetration testing and official bug bounty programs. The tool adheres to strictly configured scope rules to prevent unintended or unauthorized testing. The developers assume no liability and are not responsible for any misuse, damage, or legal consequences caused by the deployment of this software.
+
+---
 
 ## License
 

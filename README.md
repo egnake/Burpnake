@@ -1,5 +1,5 @@
-﻿<div align="center">
-  <img src="docs/assets/dashboard.png" alt="BurpNake Logo" width="800"/>
+<div align="center">
+  <img src="docs/assets/logo.jpg" alt="BurpNake Logo" width="250" style="border-radius: 20%; margin-bottom: 20px;" />
   <h1>BurpNake</h1>
   <p><b>Autonomous AI-Driven Penetration Testing & Bug Bounty Platform</b></p>
 

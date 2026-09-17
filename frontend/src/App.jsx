@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
-  Activity, Target, FileJson, MessageSquare,
+  Activity, FileJson, MessageSquare,
   FileText, ShieldAlert, Layers, Radio, Search, Download, Send, Shield
 } from 'lucide-react';
 

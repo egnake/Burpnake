@@ -1,0 +1,38 @@
+﻿# ============================================================
+# BurpNake Frontend — Multi-stage Dockerfile
+# Stage 1: node:20-alpine ile build
+# Stage 2: nginx:alpine ile serve
+# ============================================================
+
+# --- Stage 1: Build ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Bagimlilikları once kopyala (cache)
+COPY package.json package-lock.json ./
+RUN npm ci --prefer-offline
+
+# Kaynak kodu kopyala
+COPY . .
+
+# Production build
+ARG VITE_API_BASE_URL=http://localhost:8899
+ENV VITE_API_BASE_URL=
+RUN npm run build
+
+# --- Stage 2: Serve ---
+FROM nginx:alpine
+
+# Nginx konfigurasyon
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Build ciktilarini kopyala
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -qO- http://localhost:3000/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

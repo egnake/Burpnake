@@ -1,0 +1,40 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+venv/
+env/
+.env
+.pytest_cache/
+*.log
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.npm/
+frontend/.env*
+frontend/.eslintcache
+
+# Database (Do not upload local traffic/findings!)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.backup
+*.db
+*.sqlite
+*.sqlite3
+
+# Java / Connector
+connector/target/
+*.class
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# Docker volumes
+burpnake_data/
+burpnake_har/

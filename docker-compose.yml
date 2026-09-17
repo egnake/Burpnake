@@ -1,0 +1,70 @@
+﻿# ============================================================
+# BurpNake — Docker Compose
+# Tek komutla her PC'de calistirir: docker compose up --build
+# ============================================================
+version: '3.9'
+
+services:
+
+  # --- Python FastAPI Backend ---
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: burpnake_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Docker icinde 0.0.0.0 olmali — .env'i override et
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8899
+      # Ollama host.docker.internal ile erisim (Docker Desktop Windows/Mac)
+      # Linux icin: host-gateway eklendi
+      - OLLAMA_BASE_URL=
+    ports:
+      - "8899:8899"
+    volumes:
+      # SQLite veritabani persist etmek icin
+      - burpnake_data:/app/data
+      # HAR ve cookie dosyalari icin
+      - burpnake_har:/app/har_and_cookies
+    networks:
+      - burpnake_net
+    # Linux'ta Ollama'ya erisim icin (host-gateway)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8899/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # --- React Frontend (Nginx) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: burpnake_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - burpnake_net
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# Kalici storage
+volumes:
+  burpnake_data:
+    name: burpnake_data
+  burpnake_har:
+    name: burpnake_har
+
+# Izole network
+networks:
+  burpnake_net:
+    name: burpnake_net
+    driver: bridge

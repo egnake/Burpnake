@@ -1,0 +1,35 @@
+﻿# ============================================================
+# BurpNake Backend — Dockerfile
+# Python 3.12 slim tabanlı, production-ready
+# ============================================================
+FROM python:3.12-slim
+
+# Sistem bagimlilikları (lxml, beautifulsoup4 icin)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2-dev \
+    libxslt-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Calisma dizini
+WORKDIR /app
+
+# Bagimlilikları once kopyala (Docker layer cache)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Uygulama kodunu kopyala
+COPY . .
+
+# Veritabani ve log dizinleri (volume mount point)
+RUN mkdir -p /app/data /app/har_and_cookies
+
+# Port expose et
+EXPOSE 8899
+
+# Saglik kontrolu
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8899/health')" || exit 1
+
+# Baslat
+CMD ["python", "run.py"]

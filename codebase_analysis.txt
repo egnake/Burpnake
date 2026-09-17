@@ -1,0 +1,241 @@
+File: app\config.py
+  Lines: 63
+  Classes: Settings
+  Functions: 0
+File: app\main.py
+  Lines: 131
+  Classes: None
+  Functions: 0
+File: app\__init__.py
+  Lines: 4
+  Classes: None
+  Functions: 0
+File: app\api\routes_agent.py - ERROR parsing: invalid non-printable character U+FEFF (<unknown>, line 1)
+File: app\api\routes_analysis.py
+  Lines: 52
+  Classes: AnalyzeRequest, AnalyzeSingleRequest
+  Functions: 0
+File: app\api\routes_chain.py
+  Lines: 33
+  Classes: None
+  Functions: 0
+File: app\api\routes_chat.py
+  Lines: 59
+  Classes: ChatRequest
+  Functions: 0
+File: app\api\routes_cvss.py
+  Lines: 79
+  Classes: CVSSCalcRequest
+  Functions: 0
+  Warning: Uses print() instead of logger
+  Warning: Broad exception handling found
+File: app\api\routes_export.py
+  Lines: 51
+  Classes: None
+  Functions: 3
+File: app\api\routes_findings.py
+  Lines: 85
+  Classes: None
+  Functions: 5
+File: app\api\routes_import.py
+  Lines: 130
+  Classes: RawImportRequest
+  Functions: 0
+  Warning: Broad exception handling found
+File: app\api\routes_live.py - ERROR parsing: invalid non-printable character U+FEFF (<unknown>, line 1)
+File: app\api\routes_notes.py
+  Lines: 61
+  Classes: NoteCreate
+  Functions: 4
+File: app\api\routes_programs.py
+  Lines: 101
+  Classes: ProgramCreate
+  Functions: 5
+  Warning: Broad exception handling found
+File: app\api\routes_replay.py
+  Lines: 52
+  Classes: ReplayRequest
+  Functions: 0
+  Warning: Broad exception handling found
+File: app\api\routes_report.py - ERROR parsing: invalid non-printable character U+FEFF (<unknown>, line 1)
+File: app\api\routes_scope.py
+  Lines: 44
+  Classes: ScopeSetRequest, ScopeCheckRequest
+  Functions: 0
+File: app\api\routes_stream.py
+  Lines: 22
+  Classes: None
+  Functions: 0
+File: app\api\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\core\llm_gateway.py
+  Lines: 132
+  Classes: LLMGateway
+  Functions: 3
+  Warning: Broad exception handling found
+File: app\core\prompt_engine.py
+  Lines: 174
+  Classes: None
+  Functions: 1
+File: app\core\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\core\llm_providers\g4f_provider.py
+  Lines: 68
+  Classes: G4FProvider
+  Functions: 3
+  Warning: Broad exception handling found
+File: app\core\llm_providers\gemini_provider.py
+  Lines: 117
+  Classes: GeminiProvider
+  Functions: 2
+  Warning: Broad exception handling found
+File: app\core\llm_providers\ollama_provider.py
+  Lines: 120
+  Classes: OllamaProvider
+  Functions: 1
+  Warning: Broad exception handling found
+File: app\core\llm_providers\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\middleware\auth.py
+  Lines: 26
+  Classes: AuthMiddleware
+  Functions: 0
+File: app\middleware\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\models\http_exchange.py
+  Lines: 91
+  Classes: HttpHeader, HttpRequest, HttpResponse, HttpExchange
+  Functions: 5
+File: app\models\report.py
+  Lines: 27
+  Classes: ReportPlatform, Report
+  Functions: 0
+File: app\models\scope.py
+  Lines: 67
+  Classes: ScopeRule, ProgramScope
+  Functions: 4
+File: app\models\vulnerability.py
+  Lines: 124
+  Classes: Severity, Confidence, VulnType, ValidationStage, ValidationResult, Evidence, Vulnerability
+  Functions: 3
+File: app\models\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\modules\agent_loop.py - ERROR parsing: invalid non-printable character U+FEFF (<unknown>, line 1)
+File: app\modules\burp_importer.py
+  Lines: 118
+  Classes: BurpImporter
+  Functions: 10
+File: app\modules\chain_builder.py
+  Lines: 145
+  Classes: VulnChain, ChainBuilder
+  Functions: 2
+File: app\modules\collaborator_client.py
+  Lines: 78
+  Classes: OOBCallback, CollaboratorSession, CollaboratorClient
+  Functions: 2
+File: app\modules\cvss_calculator.py
+  Lines: 159
+  Classes: CVSSResult, CVSSCalculator
+  Functions: 6
+File: app\modules\database.py
+  Lines: 362
+  Classes: None
+  Functions: 17
+  Warning: Uses print() instead of logger
+File: app\modules\dedup_filter.py
+  Lines: 107
+  Classes: DedupFilter
+  Functions: 4
+  Warning: Broad exception handling found
+File: app\modules\event_broadcaster.py
+  Lines: 49
+  Classes: None
+  Functions: 0
+  Warning: Broad exception handling found
+File: app\modules\interactive_hunter.py
+  Lines: 171
+  Classes: InteractiveHunter
+  Functions: 5
+File: app\modules\jwt_analyzer.py
+  Lines: 74
+  Classes: None
+  Functions: 4
+  Warning: Broad exception handling found
+File: app\modules\passive_analyzer.py
+  Lines: 640
+  Classes: None
+  Functions: 4
+  Warning: Uses print() instead of logger
+  Warning: Broad exception handling found
+File: app\modules\poc_generator.py
+  Lines: 85
+  Classes: PoCGenerator
+  Functions: 0
+  Warning: Broad exception handling found
+File: app\modules\remediation_engine.py
+  Lines: 104
+  Classes: RemediationBlueprint, RemediationEngine
+  Functions: 1
+  Warning: Uses print() instead of logger
+File: app\modules\report_generator.py
+  Lines: 238
+  Classes: None
+  Functions: 0
+  Warning: Uses print() instead of logger
+  Warning: Broad exception handling found
+File: app\modules\request_replayer.py
+  Lines: 99
+  Classes: RequestReplayer
+  Functions: 1
+  Warning: Broad exception handling found
+File: app\modules\response_differ.py - ERROR parsing: invalid non-printable character U+FEFF (<unknown>, line 1)
+File: app\modules\scope_fetcher.py
+  Lines: 128
+  Classes: None
+  Functions: 1
+  Warning: Broad exception handling found
+File: app\modules\scope_manager.py
+  Lines: 67
+  Classes: ScopeManager
+  Functions: 6
+File: app\modules\validation_gate.py
+  Lines: 160
+  Classes: ValidationGate
+  Functions: 0
+  Warning: Broad exception handling found
+File: app\modules\vulnerability_analyzer.py
+  Lines: 205
+  Classes: VulnerabilityAnalyzer
+  Functions: 4
+File: app\modules\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0
+File: app\utils\burp_xml_parser.py
+  Lines: 127
+  Classes: None
+  Functions: 3
+  Warning: Broad exception handling found
+File: app\utils\har_parser.py
+  Lines: 101
+  Classes: None
+  Functions: 3
+  Warning: Broad exception handling found
+File: app\utils\http_parser.py
+  Lines: 128
+  Classes: None
+  Functions: 2
+File: app\utils\__init__.py
+  Lines: 1
+  Classes: None
+  Functions: 0

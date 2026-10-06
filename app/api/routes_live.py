@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 
 from app.modules.database import save_exchange, get_exchanges, get_findings
+from app.modules.event_broadcaster import broadcast
 from app.modules.scope_fetcher import fetch_hackerone_scope
 from app.modules.dedup_filter import dedup_filter
 
@@ -47,6 +48,19 @@ async def receive_live_request(req: LiveRequest):
         "program_id": req.program_id or "",
         "interest_level": "pending", "ai_analyzed": False,
     })
+    try:
+        await broadcast("new_exchange", {
+            "id": eid,
+            "exchange_id": eid,
+            "method": req.method,
+            "path": req.path,
+            "host": req.host,
+            "url": req.url,
+            "status_code": req.status_code,
+            "msg": f"New request: {req.method} {req.path}",
+        })
+    except Exception:
+        pass
     return {"status": "ok", "id": eid, "interest_level": "pending"}
 
 

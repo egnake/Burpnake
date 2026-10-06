@@ -32,7 +32,7 @@ class BurpImporter:
         response = parse_raw_response(raw_response) if raw_response else None
 
         exchange = HttpExchange(
-            id=self._next_id,
+            id=str(self._next_id),
             request=request,
             response=response or HttpExchange().response,
             source="manual",
@@ -44,8 +44,8 @@ class BurpImporter:
     def _add_exchanges(self, new: list[HttpExchange]) -> list[HttpExchange]:
         """Add exchanges with reassigned IDs and scope filtering."""
         for ex in new:
-            ex.id = self._next_id
-            ex.request.id = self._next_id
+            ex.id = str(self._next_id)
+            ex.request.id = str(self._next_id)
             self._next_id += 1
 
         # Filter by scope

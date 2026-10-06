@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   Activity, FileJson, MessageSquare,
-  FileText, ShieldAlert, Layers, Radio, Search, Download, Send, Shield
+  FileText, ShieldAlert, Layers, Radio, Search, Download, Send, Shield, Target
 } from 'lucide-react';
 
 import Dashboard      from './pages/Dashboard';

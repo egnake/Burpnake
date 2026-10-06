@@ -474,7 +474,7 @@ def triage_exchange(ex: dict) -> tuple:
     return level, reason, interesting_params, score, matched
 
 
-def build_deep_analysis_prompt(ex: dict, matched: list) -> str:
+def build_deep_analysis_prompt(ex: dict, matched: list, dom_context: dict | None = None) -> str:
     """
     Sadece zafiyetleri listelemez. Gercek bir pentester gibi response body'yi 
     okumasini ve "Burada soyle bir hata donmus, demek ki WAF yok, bypass icin soyle yapmali" 
@@ -483,10 +483,37 @@ def build_deep_analysis_prompt(ex: dict, matched: list) -> str:
     req_text = _decode(ex.get("request_b64", ""))[:3000]
     res_text = _decode(ex.get("response_b64", ""))[:3000]
     cats     = ", ".join(matched) if matched else "unknown"
-    
+
+    dom_section = ""
+    if dom_context:
+        hidden = dom_context.get("hidden_inputs") or []
+        forms  = dom_context.get("forms") or []
+        comments = dom_context.get("comments") or []
+        apis   = dom_context.get("api_endpoints") or []
+        parts = []
+        if hidden:
+            parts.append("Hidden inputs (CSRF/state/IDOR candidates):\n" + "\n".join(
+                f"  - {h.get('name')} = {h.get('value')}" for h in hidden[:30]
+            ))
+        if forms:
+            parts.append("Forms:\n" + "\n".join(
+                f"  - {f.get('method')} {f.get('action')} | inputs: {', '.join(f.get('inputs') or [])}"
+                for f in forms[:15]
+            ))
+        if comments:
+            parts.append("HTML comments (leaked notes/endpoints):\n" + "\n".join(
+                f"  - {c[:200]}" for c in comments[:20]
+            ))
+        if apis:
+            parts.append("API endpoints found in scripts:\n" + "\n".join(
+                f"  - {a}" for a in apis[:30]
+            ))
+        if parts:
+            dom_section = "\n=== DOM / CLIENT-SIDE INTELLIGENCE ===\n" + "\n\n".join(parts) + "\n"
+
     return f"""You are an elite Bug Bounty hunter analyzing an HTTP exchange.
 The automated triage flagged this as: {cats}
-
+{dom_section}
 === HTTP REQUEST ===
 {req_text}
 

@@ -9,12 +9,12 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
 
 class AnalyzeRequest(BaseModel):
-    exchange_ids: list[int] | None = None
+    exchange_ids: list[str] | None = None
     focus: str | None = None  # e.g., "idor", "sqli", "ssrf"
 
 
 class AnalyzeSingleRequest(BaseModel):
-    exchange_id: int
+    exchange_id: str
     vuln_type: str | None = None
 
 

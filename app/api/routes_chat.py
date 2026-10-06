@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     session_id: str = ""
     message: str
-    exchange_ids: list[int] | None = None
+    exchange_ids: list[str] | None = None
 
 
 @router.post("/send")

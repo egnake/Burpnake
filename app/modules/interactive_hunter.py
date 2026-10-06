@@ -30,7 +30,7 @@ class InteractiveHunter:
         self,
         session_id: str,
         message: str,
-        exchange_ids: list[int] | None = None,
+        exchange_ids: list[str] | None = None,
     ) -> str:
         """
         Send a message in the hunting session.

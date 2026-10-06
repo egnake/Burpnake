@@ -14,7 +14,7 @@ class HttpHeader(BaseModel):
 
 class HttpRequest(BaseModel):
     """Parsed HTTP request."""
-    id: int = 0
+    id: str = ""
     method: str = "GET"
     url: str = ""
     path: str = ""
@@ -74,7 +74,7 @@ class HttpResponse(BaseModel):
 
 class HttpExchange(BaseModel):
     """A complete HTTP request-response pair from Burp Suite."""
-    id: int = 0
+    id: str = ""
     request: HttpRequest = Field(default_factory=HttpRequest)
     response: HttpResponse = Field(default_factory=HttpResponse)
     timestamp: Optional[datetime] = None

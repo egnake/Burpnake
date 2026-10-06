@@ -88,7 +88,7 @@ async def list_exchanges(
 
 
 @router.get("/exchanges/{exchange_id}")
-async def get_exchange(exchange_id: int):
+async def get_exchange(exchange_id: str):
     """Get full details of a specific exchange."""
     ex = burp_importer.get_exchange(exchange_id)
     if not ex:

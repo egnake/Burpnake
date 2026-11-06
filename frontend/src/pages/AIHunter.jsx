@@ -97,7 +97,15 @@ export default function AIHunter() {
                       {item.path}
                     </div>
                     <div className="text-xs text-slate-500 mt-1.5 truncate max-w-2xl">
-                      Matched: {item.matched_vulns ? JSON.parse(item.matched_vulns).join(', ') : 'Unknown'}
+                      Matched: {(() => {
+                        if (!item.matched_vulns) return item.interest_reason || 'Unknown';
+                        try {
+                          const parsed = typeof item.matched_vulns === 'string' ? JSON.parse(item.matched_vulns) : item.matched_vulns;
+                          return Array.isArray(parsed) ? parsed.join(', ') : String(parsed);
+                        } catch {
+                          return item.interest_reason || item.matched_vulns;
+                        }
+                      })()}
                     </div>
                   </div>
                   

@@ -5,7 +5,7 @@ SSE (Server-Sent Events) ile frontend'e aninda bildirim gonderir.
 import asyncio
 import json
 from typing import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Global event queue - tum SSE baglantilari bunu dinler
 _subscribers: list[asyncio.Queue] = []
@@ -16,7 +16,7 @@ async def broadcast(event_type: str, data: dict):
     payload = {
         "type": event_type,
         "data": data,
-        "ts": datetime.utcnow().isoformat(),
+        "ts": datetime.now(timezone.utc).isoformat(),
     }
     dead = []
     for q in _subscribers:

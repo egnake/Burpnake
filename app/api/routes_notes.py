@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from app.modules.database import get_db
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ def create_note(body: NoteCreate):
     nid = str(uuid.uuid4())
     conn.execute(
         "INSERT INTO notes (id, exchange_id, content, created_at) VALUES (?,?,?,?)",
-        (nid, body.exchange_id, body.content, datetime.utcnow().isoformat()),
+        (nid, body.exchange_id, body.content, datetime.now(timezone.utc).isoformat()),
     )
     conn.commit()
     conn.close()

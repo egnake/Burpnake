@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *.class
@@ -26,6 +26,10 @@ data/*.backup
 
 # Java / Connector
 connector/target/
+connector/.gradle/
+connector/build/
+.gradle/
+build/
 *.class
 
 # OS / IDE

@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, Dict
 
@@ -6,6 +6,7 @@ from app.modules.database import save_exchange, get_exchanges, get_findings
 from app.modules.event_broadcaster import broadcast
 from app.modules.scope_fetcher import fetch_hackerone_scope
 from app.modules.dedup_filter import dedup_filter
+from app.modules.passive_analyzer import triage_exchange
 
 router = APIRouter(prefix="/api/import", tags=["live"])
 
@@ -39,14 +40,26 @@ async def receive_live_request(req: LiveRequest):
     if should_skip and not req.force_analyze:
         return {"status": "skipped", "reason": skip_reason}
 
-    eid = save_exchange({
+    raw_dict = {
         "host": req.host, "url": req.url, "path": req.path,
         "method": req.method, "status_code": req.status_code,
         "request_b64": req.request_b64, "response_b64": req.response_b64,
         "request_headers": req.request_headers or {},
         "response_headers": req.response_headers or {},
         "program_id": req.program_id or "",
-        "interest_level": "pending", "ai_analyzed": False,
+    }
+
+    # Anlik regex ve kural triage calistir (Burp satiri aninda renklensin)
+    level, reason, params, score, matched = triage_exchange(raw_dict)
+
+    eid = save_exchange({
+        **raw_dict,
+        "interest_level": level,
+        "interest_reason": reason,
+        "interesting_params": params,
+        "tags": matched,
+        "score": score,
+        "ai_analyzed": False,
     })
     try:
         await broadcast("new_exchange", {
@@ -57,11 +70,30 @@ async def receive_live_request(req: LiveRequest):
             "host": req.host,
             "url": req.url,
             "status_code": req.status_code,
+            "interest_level": level,
+            "score": score,
             "msg": f"New request: {req.method} {req.path}",
         })
+        if level in ("critical", "interesting"):
+            await broadcast("new_interesting_request", {
+                "id": eid,
+                "method": req.method,
+                "path": req.path,
+                "host": req.host,
+                "level": level,
+                "reason": reason,
+                "score": score,
+                "msg": f"[{level.upper()}] {req.method} {req.path} — {reason}",
+            })
     except Exception:
         pass
-    return {"status": "ok", "id": eid, "interest_level": "pending"}
+    return {
+        "status": "ok",
+        "id": eid,
+        "interest_level": level,
+        "score": score,
+        "matched": matched,
+    }
 
 
 @router.get("/live-pull")

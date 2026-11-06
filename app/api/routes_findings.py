@@ -75,11 +75,4 @@ async def get_finding_report(fid: str, platform: str = "hackerone"):
 
     report_md = await generate_report(finding, exchange, platform)
 
-    # Raporu findings tablosuna kaydet
-    conn2 = get_db()
-    c2 = conn2.cursor()
-    c2.execute("UPDATE findings SET confirmed=1 WHERE id=?", (fid,))
-    conn2.commit()
-    conn2.close()
-
     return {"report": report_md, "platform": platform}

@@ -8,6 +8,8 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.swing.*;
 import java.awt.BorderLayout;
@@ -17,7 +19,7 @@ import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.GridLayout;
 
-public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuFactory {
+public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuFactory, IExtensionStateListener {
     private IBurpExtenderCallbacks callbacks;
     private IExtensionHelpers helpers;
     private String backendUrl = "http://127.0.0.1:8899";
@@ -25,6 +27,7 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
     private boolean passiveMode = true;
     private JTextField programField;
     private JLabel statusLabel;
+    private ExecutorService threadPool = Executors.newFixedThreadPool(6);
 
     @Override
     public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
@@ -33,8 +36,16 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
         callbacks.setExtensionName("BurpNake Live Connector v2");
         callbacks.registerHttpListener(this);
         callbacks.registerContextMenuFactory(this);
+        callbacks.registerExtensionStateListener(this);
         callbacks.addSuiteTab(new Tab());
         callbacks.printOutput("[BurpNake] Baglandi! Backend: " + backendUrl);
+    }
+
+    @Override
+    public void extensionUnloaded() {
+        if (threadPool != null && !threadPool.isShutdown()) {
+            threadPool.shutdown();
+        }
     }
 
     // --- Proxy'den gecen HER istegi yakala (Pasif Mod) ---
@@ -46,7 +57,15 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
         if (toolFlag != IBurpExtenderCallbacks.TOOL_PROXY) return;
         if (!passiveMode) return;
 
-        new Thread(() -> {
+        // Burp Suite kapsam (Scope) kontrolu: Eger hedef kapsam disiysa backend'e bosuna gonderme
+        try {
+            java.net.URL url = helpers.analyzeRequest(messageInfo).getUrl();
+            if (url != null && !callbacks.isInScope(url)) {
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        threadPool.submit(() -> {
             try {
                 String result = sendToBurpNake(messageInfo, false);
                 if (result != null) {
@@ -55,7 +74,7 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
             } catch (Exception e) {
                 callbacks.printError("[BurpNake] Pasif mod hatasi: " + e.getMessage());
             }
-        }).start();
+        });
     }
 
     // --- Sag tik menusu: Sec ve gonder ---

@@ -1,9 +1,10 @@
-﻿"""BurpNake Agent API Routes."""
+"""BurpNake Agent API Routes."""
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
 import asyncio
-
+import json
+from app.config import settings
 from app.modules.database import get_exchanges, get_findings, get_db, save_finding
 from app.modules.event_broadcaster import broadcast
 
@@ -59,13 +60,15 @@ async def start_hunt(req: HuntRequest, background_tasks: BackgroundTasks):
 
 @router.post("/hunt-batch")
 async def start_batch_hunt(req: BatchHuntRequest, background_tasks: BackgroundTasks):
-    """Birden fazla exchange uzerinde ardisik otonom avlanma."""
+    """Birden fazla exchange uzerinde kontrollu otonom avlanma."""
     from app.modules.agent_loop import autonomous_agent
     if autonomous_agent is None:
         raise HTTPException(status_code=503, detail="Agent henuz baslatilmadi")
 
     started = []
     skipped = []
+    queue_items = []
+
     for eid in req.exchange_ids:
         conn = get_db()
         row = conn.execute("SELECT * FROM exchanges WHERE id=?", (eid,)).fetchone()
@@ -80,16 +83,22 @@ async def start_batch_hunt(req: BatchHuntRequest, background_tasks: BackgroundTa
         reason = ex_dict.get("interest_reason", "")
         matched_vulns = [r.strip() for r in reason.split(",") if r.strip()] or ["unknown"]
 
-        async def run_one(ex=ex_dict, mv=matched_vulns):
-            result = await autonomous_agent.hunt(ex, mv, broadcast)
-            await broadcast("agent_complete", {
-                "exchange_id": ex["id"], "success": result.success,
-                "finding_id": result.finding_id, "iterations": result.iterations,
-                "msg": f"{'🎯' if result.success else '🔍'} {ex.get('path','/')} ({result.iterations} iter)",
-            })
-
-        background_tasks.add_task(run_one)
+        queue_items.append((ex_dict, matched_vulns))
         started.append(eid)
+
+    if queue_items:
+        async def run_batch():
+            for ex, mv in queue_items:
+                result = await autonomous_agent.hunt(ex, mv, broadcast)
+                await broadcast("agent_complete", {
+                    "exchange_id": ex["id"], "success": result.success,
+                    "finding_id": result.finding_id, "iterations": result.iterations,
+                    "msg": f"{'🎯' if result.success else '🔍'} {ex.get('path','/')} ({result.iterations} iter)",
+                })
+                delay = getattr(settings, "FUZZER_RATE_LIMIT", 0.5)
+                await asyncio.sleep(delay)
+
+        background_tasks.add_task(run_batch)
 
     return {"status": "batch_started", "started": len(started), "skipped": len(skipped),
             "started_ids": started, "skipped_ids": skipped}
@@ -105,7 +114,16 @@ async def get_auto_hunt_queue():
            ORDER BY score DESC LIMIT 50"""
     ).fetchall()
     conn.close()
-    return {"queue": [dict(r) for r in rows], "total": len(rows)}
+
+    formatted_queue = []
+    for r in rows:
+        item = dict(r)
+        reason = item.get("interest_reason", "")
+        matched_list = [x.strip() for x in reason.split(",") if x.strip()]
+        item["matched_vulns"] = json.dumps(matched_list)
+        formatted_queue.append(item)
+
+    return {"queue": formatted_queue, "total": len(formatted_queue)}
 
 
 @router.post("/auto-hunt-all")

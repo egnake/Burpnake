@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 import httpx
 import time
+from app.modules.scope_manager import scope_manager
 
 router = APIRouter(prefix="/api/replay", tags=["replay"])
 
@@ -13,10 +14,17 @@ class ReplayRequest(BaseModel):
     headers: Optional[Dict[str, str]] = {}
     body: Optional[str] = ""
     follow_redirects: bool = False
+    ignore_scope: bool = False
 
 @router.post("/send")
 async def replay_request(req: ReplayRequest):
     """HTTP istegi gonder ve yaniti dondur."""
+    if not req.ignore_scope and not scope_manager.is_in_scope(req.url):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Kapsam dışı istek engellendi (Scope Violation): {req.url}"
+        )
+
     try:
         start = time.time()
         async with httpx.AsyncClient(

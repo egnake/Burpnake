@@ -4,7 +4,7 @@ SQLite veritabani katmani - tum verileri kalici olarak saklar.
 import sqlite3
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "burpnake.db"
@@ -12,7 +12,9 @@ DB_PATH = Path(__file__).parent.parent.parent / "data" / "burpnake.db"
 
 def get_db():
     DB_PATH.parent.mkdir(exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=15.0)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=30.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -86,6 +88,14 @@ def init_db():
         )
     """)
 
+    # Hizli filtreleme ve sorgular icin indeksler
+    c.execute("CREATE INDEX IF NOT EXISTS idx_exchanges_triage ON exchanges(interest_level, ai_analyzed, score)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_exchanges_program ON exchanges(program_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_exchanges_created ON exchanges(created_at)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_findings_program ON findings(program_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity, dismissed)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_findings_exchange ON findings(exchange_id)")
+
     conn.commit()
     conn.close()
     print("[DB] Database initialized.")
@@ -97,7 +107,7 @@ def save_exchange(data: dict) -> str:
     conn = get_db()
     c = conn.cursor()
     eid = data.get("id") or str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     c.execute("""
         INSERT OR REPLACE INTO exchanges
         (id, program_id, host, url, path, method, status_code, request_b64,
@@ -202,7 +212,7 @@ def save_finding(data: dict) -> str:
     conn = get_db()
     c = conn.cursor()
     fid = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     c.execute("""
         INSERT INTO findings
         (id, exchange_id, program_id, title, severity, description, steps_to_test,
@@ -296,7 +306,7 @@ def save_program(data: dict) -> str:
     conn = get_db()
     c = conn.cursor()
     pid = data.get("id") or str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     c.execute("""
         INSERT OR REPLACE INTO programs (id, name, platform, scope_json, is_active, created_at)
         VALUES (?,?,?,?,?,?)
@@ -343,7 +353,7 @@ def activate_program(pid: str):
 def save_message(session_id: str, role: str, content: str, exchange_ids: list = None):
     conn = get_db()
     c = conn.cursor()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     c.execute("""
         INSERT INTO chat_messages (id, session_id, role, content, exchange_ids, created_at)
         VALUES (?,?,?,?,?,?)

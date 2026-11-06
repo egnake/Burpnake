@@ -1,4 +1,4 @@
-﻿import asyncio, json, logging, re, base64
+import asyncio, json, logging, re, base64
 from typing import Optional
 
 logger = logging.getLogger("burpnake.agent")
@@ -138,6 +138,7 @@ class AutonomousAgent:
             reasoning = ai_decision.get("reasoning", "")
             payload_desc = ai_decision.get("payload_description", "")
             mods = ai_decision.get("payload_modifications", {})
+            macros = ai_decision.get("macro_modifications", [])
 
             await broadcast_fn("agent_iteration", {
                 "exchange_id": eid, "iteration": iteration, "decision": decision,
@@ -188,19 +189,34 @@ class AutonomousAgent:
                 break
 
             elif decision == "try_payload":
-                if not mods:
+                if not mods and not macros:
                     continue
                 try:
-                    new_req_text, new_res_text = await _send_modified_request(ex, mods, current_req_text)
+                    if macros:
+                        new_req_text, new_res_text = await _send_macro_requests(ex, macros, current_req_text)
+                    else:
+                        new_req_text, new_res_text = await _send_modified_request(ex, mods, current_req_text)
+
                     current_req_text = new_req_text
                     current_res_text = new_res_text
                     success_indicators = ai_decision.get("success_indicators", [])
                     auto_confirmed = _check_success_indicators(new_res_text, success_indicators)
                     
+                    # Kör diferansiyel anomali tespiti (ResponseDiffer)
+                    try:
+                        from app.modules.response_differ import response_differ
+                        base_feat = response_differ.extract_features(res_text, ex.get("status_code", 0))
+                        new_feat = response_differ.extract_features(new_res_text, 200)
+                        diff = response_differ.compare(base_feat, new_feat)
+                        if diff.get("is_anomaly") and not auto_confirmed:
+                            system_override = f"\n\n[ANOMALY DETECTED] Response differ: {diff.get('reason')}. Length delta: {diff.get('length_diff')}, Word count delta: {diff.get('word_count_diff')}."
+                    except Exception:
+                        pass
+
                     payload_history.append({
                         "iteration": iteration, "decision": decision,
                         "reasoning": reasoning, "payload_description": payload_desc, 
-                        "modifications": mods, "result_preview": new_res_text[:200]
+                        "modifications": mods or macros, "result_preview": new_res_text[:200]
                     })
                     
                     await broadcast_fn("agent_request_sent", {
@@ -219,7 +235,7 @@ class AutonomousAgent:
                     payload_history.append({
                         "iteration": iteration, "decision": decision,
                         "reasoning": reasoning, "payload_description": payload_desc, 
-                        "modifications": mods, "result_preview": f"Error: {e}"
+                        "modifications": mods or macros, "result_preview": f"Error: {e}"
                     })
                     current_res_text = f"HTTP/1.1 000 Network Error\r\n\r\nError executing request: {e}"
                     await broadcast_fn("agent_request_failed", {

@@ -1,8 +1,10 @@
 """Burp Suite data importer - XML, HAR, raw HTTP."""
 
 from __future__ import annotations
+import base64
+import json
 from pathlib import Path
-from app.models.http_exchange import HttpExchange
+from app.models.http_exchange import HttpExchange, HttpRequest, HttpResponse, HttpHeader
 from app.utils.burp_xml_parser import parse_burp_xml
 from app.utils.har_parser import parse_har
 from app.utils.http_parser import parse_raw_request, parse_raw_response
@@ -15,6 +17,75 @@ class BurpImporter:
     def __init__(self):
         self.exchanges: list[HttpExchange] = []
         self._next_id: int = 1
+
+    def _persist_to_db(self, ex: HttpExchange):
+        """Import edilen istegi SQLite veritabanina da kaydeder."""
+        try:
+            from app.modules.database import save_exchange
+            req_b64 = base64.b64encode(ex.request.raw.encode()).decode() if ex.request.raw else ""
+            res_b64 = base64.b64encode(ex.response.raw.encode()).decode() if ex.response.raw else ""
+            save_exchange({
+                "id": str(ex.id),
+                "host": ex.request.host,
+                "url": ex.request.url,
+                "path": ex.request.path,
+                "method": ex.request.method,
+                "status_code": ex.response.status_code,
+                "request_b64": req_b64,
+                "response_b64": res_b64,
+                "request_headers": {h.name: h.value for h in ex.request.headers},
+                "response_headers": {h.name: h.value for h in ex.response.headers},
+                "interest_level": "pending",
+                "score": 0,
+            })
+        except Exception:
+            pass
+
+    def _row_to_exchange(self, row: dict) -> HttpExchange:
+        """SQLite veritabani satirini HttpExchange nesnesine donusturur."""
+        try:
+            req_raw = base64.b64decode(row.get("request_b64", "")).decode("utf-8", errors="ignore")
+        except Exception:
+            req_raw = row.get("request_b64", "")
+
+        try:
+            res_raw = base64.b64decode(row.get("response_b64", "")).decode("utf-8", errors="ignore")
+        except Exception:
+            res_raw = row.get("response_b64", "")
+
+        try:
+            req_h_dict = json.loads(row.get("request_headers", "{}") or "{}")
+        except Exception:
+            req_h_dict = {}
+
+        try:
+            res_h_dict = json.loads(row.get("response_headers", "{}") or "{}")
+        except Exception:
+            res_h_dict = {}
+
+        req_headers = [HttpHeader(name=k, value=str(v)) for k, v in req_h_dict.items()]
+        res_headers = [HttpHeader(name=k, value=str(v)) for k, v in res_h_dict.items()]
+
+        req = HttpRequest(
+            id=str(row.get("id")),
+            method=row.get("method") or "GET",
+            url=row.get("url") or "",
+            path=row.get("path") or "",
+            host=row.get("host") or "",
+            headers=req_headers,
+            raw=req_raw,
+        )
+        res = HttpResponse(
+            status_code=row.get("status_code") or 0,
+            headers=res_headers,
+            raw=res_raw,
+        )
+        return HttpExchange(
+            id=str(row.get("id")),
+            request=req,
+            response=res,
+            source="sqlite",
+        )
 
     def import_burp_xml(self, content: str | bytes) -> list[HttpExchange]:
         """Import from Burp Suite XML export."""
@@ -39,6 +110,7 @@ class BurpImporter:
         )
         self._next_id += 1
         self.exchanges.append(exchange)
+        self._persist_to_db(exchange)
         return exchange
 
     def _add_exchanges(self, new: list[HttpExchange]) -> list[HttpExchange]:
@@ -51,13 +123,28 @@ class BurpImporter:
         # Filter by scope
         in_scope = scope_manager.filter_exchanges(new)
         self.exchanges.extend(in_scope)
+        for ex in in_scope:
+            self._persist_to_db(ex)
         return in_scope
 
-    def get_exchange(self, exchange_id: int) -> HttpExchange | None:
-        """Get a specific exchange by ID."""
+    def get_exchange(self, exchange_id: int | str) -> HttpExchange | None:
+        """Get a specific exchange by ID from memory or SQLite."""
+        target_id = str(exchange_id)
         for ex in self.exchanges:
-            if ex.id == exchange_id:
+            if str(ex.id) == target_id:
                 return ex
+
+        # SQLite arama yedegi
+        try:
+            from app.modules.database import get_db
+            conn = get_db()
+            row = conn.execute("SELECT * FROM exchanges WHERE id=?", (target_id,)).fetchone()
+            conn.close()
+            if row:
+                return self._row_to_exchange(dict(row))
+        except Exception:
+            pass
+
         return None
 
     def get_exchanges(
@@ -69,6 +156,13 @@ class BurpImporter:
     ) -> list[HttpExchange]:
         """Filter exchanges with various criteria."""
         result = self.exchanges
+        if not result:
+            try:
+                from app.modules.database import get_exchanges
+                db_rows = get_exchanges(limit=200)
+                result = [self._row_to_exchange(r) for r in db_rows]
+            except Exception:
+                result = []
 
         if method:
             result = [e for e in result if e.request.method.upper() == method.upper()]

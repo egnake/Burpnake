@@ -9,7 +9,7 @@ import base64
 
 # Force unbuffered output
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi.testclient import TestClient
 from app.main import app
@@ -96,7 +96,7 @@ def test_suite():
             "url": "https://httpbin.org/status/200",
             "method": "GET"
         })
-        check("POST /api/replay/send -> Handled without crash", r_rep.status_code in [200, 502, 504])
+        check("POST /api/replay/send -> Handled without crash", r_rep.status_code in [200, 403, 502, 504])
 
         # Chain Builder API
         r_chain = client.get("/api/chains/analyze")

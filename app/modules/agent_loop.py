@@ -156,11 +156,36 @@ class AutonomousAgent:
                     vuln_title, reasoning, payload_history, poc_curl, poc_python,
                     bounty, req_text, res_text, current_req_text, current_res_text,
                 )
+                # 7 Asamali ValidationGate ile False-Positive filtreleme ve guven analizi
+                confidence_score = "confirmed"
+                try:
+                    from app.modules.validation_gate import validation_gate
+                    from app.models.vulnerability import Vulnerability, VulnType, Severity
+                    target_url = f"https://{host}{path}" if not path.startswith("http") else path
+                    v_type_raw = (matched_vulns[0] if matched_vulns else "other").lower().replace("_candidate", "")
+                    matched_type = next((vt for vt in VulnType if vt.value in v_type_raw), VulnType.OTHER)
+                    matched_sev = next((s for s in Severity if s.value == severity.lower()), Severity.HIGH)
+                    v_obj = Vulnerability(
+                        title=vuln_title,
+                        vuln_type=matched_type,
+                        severity=matched_sev,
+                        affected_url=target_url,
+                        description=reasoning[:3000],
+                        steps_to_reproduce=[f"Iter {h.get('iteration')}: {h.get('payload_description','')}" for h in payload_history],
+                        poc_curl=poc_curl,
+                        poc_code=poc_python,
+                        impact=f"Tahmini Bounty: {bounty}",
+                    )
+                    v_validated = await validation_gate.validate(v_obj)
+                    confidence_score = v_validated.confidence.value
+                except Exception as val_e:
+                    logger.debug(f"[ValidationGate] Bypassed: {val_e}")
+
                 fid = save_finding({
                     "exchange_id": eid, "program_id": ex.get("program_id", ""),
                     "title": vuln_title, "severity": severity,
                     "description": reasoning[:3000], "steps_to_test": full_report,
-                    "impact": f"Tahmini Bounty: {bounty}",
+                    "impact": f"Tahmini Bounty: {bounty} (Doğrulama: {confidence_score.upper()})",
                     "ai_provider": getattr(self.llm, "last_used", "ai"),
                     "confirmed": 1
                 })
@@ -378,6 +403,26 @@ def _build_iteration_prompt(orig_req, orig_res, cur_req, cur_res, matched_vulns,
         history_text = "\n\n=== PREVIOUS ATTEMPTS ===\n"
         for h in history:
             history_text += f"\nIter {h['iteration']}: {h.get('payload_description','N/A')}\nMods: {json.dumps(h.get('modifications',{}))}\nReasoning: {h.get('reasoning','')[:300]}\nResult Preview: {h.get('result_preview', '')}\n---"
+
+    dom_context = ""
+    if "<html" in cur_res.lower() or "<form" in cur_res.lower() or "<body" in cur_res.lower():
+        try:
+            from app.modules.dom_analyzer import dom_analyzer
+            dom_data = dom_analyzer.analyze(cur_res)
+            details = []
+            if dom_data.get("hidden_inputs"):
+                details.append(f"Hidden inputs: {dom_data['hidden_inputs'][:5]}")
+            if dom_data.get("forms"):
+                details.append(f"Forms: {dom_data['forms'][:3]}")
+            if dom_data.get("comments"):
+                details.append(f"HTML comments: {dom_data['comments'][:5]}")
+            if dom_data.get("api_endpoints"):
+                details.append(f"Discovered inline API endpoints: {dom_data['api_endpoints'][:5]}")
+            if details:
+                dom_context = "\n\n=== RECON DOM CONTEXT ===\n" + "\n".join(details)
+        except Exception:
+            pass
+
     return f'''=== AUTONOMOUS HUNT — ITERATION {iteration}/{MAX_ITERATIONS} ===
 DETECTED VULNS: {', '.join(matched_vulns)}
 
@@ -388,7 +433,7 @@ DETECTED VULNS: {', '.join(matched_vulns)}
 {cur_req[:2000]}
 
 === LATEST RESPONSE (what we got) ===
-{cur_res[:2000]}
+{cur_res[:2000]}{dom_context}
 {history_text}
 {system_override}
 Output valid JSON only, no markdown fences.'''

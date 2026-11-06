@@ -103,6 +103,20 @@ async def pull_live_requests():
     return {"exchanges": exchanges}
 
 
+@router.get("/exchange/{eid}")
+async def get_live_exchange(eid: str):
+    """Belirli bir exchange'i id ile SQLite'tan getirir."""
+    from app.modules.database import get_db
+    conn = get_db()
+    c = conn.cursor()
+    row = c.execute("SELECT * FROM exchanges WHERE id=?", (eid,)).fetchone()
+    conn.close()
+    if not row:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Exchange bulunamadi")
+    return dict(row)
+
+
 @router.get("/live-status")
 async def live_status():
     """Connector saglik kontrolu - JAR bu endpoint'i ping'ler."""

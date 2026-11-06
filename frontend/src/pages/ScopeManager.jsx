@@ -22,8 +22,8 @@ export default function ScopeManager() {
       const res = await axios.get('/api/scope/current');
       if (res.data.program_name) {
         setProgramName(res.data.program_name);
-        setIncludeDomains(res.data.include_rules || []);
-        setExcludeDomains(res.data.exclude_rules || []);
+        setIncludeDomains(res.data.includes || res.data.include_rules || []);
+        setExcludeDomains(res.data.excludes || res.data.exclude_rules || []);
       }
     } catch (err) {
       console.error("Scope fetch error", err);

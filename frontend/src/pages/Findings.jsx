@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, CheckCircle, X, FileText, ChevronDown } from 'lucide-react';
+import { ShieldAlert, CheckCircle, X, FileText, ChevronDown, Shield } from 'lucide-react';
 
 const SEV_COLORS = {
   critical: { bg: '#7f1d1d', text: '#fca5a5', border: '#ef4444' },
@@ -44,6 +44,7 @@ export default function Findings() {
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
   const [reportLoading, setReportLoading] = useState('');
+  const [valLoading, setValLoading] = useState('');
 
   useEffect(() => { loadFindings(); }, [filter]);
 
@@ -55,6 +56,20 @@ export default function Findings() {
       setFindings(res.data.findings || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const validate = async (id) => {
+    setValLoading(id);
+    try {
+      const res = await axios.post(`/api/findings/${id}/validate`);
+      const details = (res.data.results || []).map(r => `${r.passed ? '✓' : '✗'} ${r.stage}: ${r.details}`).join('\n');
+      alert(`7 Aşamalı Doğrulama Sonucu:\nGüven Düzeyi: ${res.data.confidence?.toUpperCase()}\n\n${details}`);
+      await loadFindings();
+    } catch (e) {
+      alert('Doğrulama başarısız.');
+    } finally {
+      setValLoading('');
+    }
   };
 
   const confirm = async (id) => {
@@ -135,6 +150,12 @@ export default function Findings() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => validate(f.id)} disabled={valLoading === f.id}
+                    className="text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
+                    style={{ borderColor: 'var(--color-dark-600)' }} title="7 Aşamalı Validation Gate">
+                    <Shield className="w-3.5 h-3.5 text-blue-400" />
+                    {valLoading === f.id ? '...' : 'Doğrula'}
+                  </button>
                   <button onClick={() => generateReport(f.id)} disabled={reportLoading === f.id}
                     className="text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
                     style={{ borderColor: 'var(--color-dark-600)' }}>

@@ -76,3 +76,45 @@ async def get_finding_report(fid: str, platform: str = "hackerone"):
     report_md = await generate_report(finding, exchange, platform)
 
     return {"report": report_md, "platform": platform}
+
+
+@router.post("/{fid}/validate")
+async def validate_finding(fid: str):
+    """7 Asamali ValidationGate ile bulguyu dogrular ve guven skorunu belirler."""
+    from app.modules.validation_gate import validation_gate
+    from app.models.vulnerability import Vulnerability
+    conn = get_db()
+    c = conn.cursor()
+    frow = c.execute("SELECT * FROM findings WHERE id=?", (fid,)).fetchone()
+    if not frow:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Finding not found")
+    finding = dict(frow)
+    conn.close()
+
+    v_obj = Vulnerability(
+        id=fid,
+        title=finding.get("title", ""),
+        description=finding.get("description", ""),
+        steps_to_reproduce=[finding.get("steps_to_test", "")],
+        impact=finding.get("impact", ""),
+    )
+    validated = await validation_gate.validate(v_obj)
+    conf = validated.confidence.value
+
+    conn2 = get_db()
+    c2 = conn2.cursor()
+    new_impact = f"{finding.get('impact', '')} [Validated: {conf.upper()}]".strip()
+    c2.execute("UPDATE findings SET impact=? WHERE id=?", (new_impact, fid))
+    conn2.commit()
+    conn2.close()
+
+    return {
+        "status": "ok",
+        "finding_id": fid,
+        "confidence": conf,
+        "results": [
+            {"stage": r.stage.value, "passed": r.passed, "details": r.details}
+            for r in validated.validation_results
+        ],
+    }

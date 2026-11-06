@@ -42,3 +42,13 @@ async def check_scope(req: ScopeCheckRequest):
     """Check if a URL is in scope."""
     in_scope = scope_manager.is_in_scope(req.url)
     return {"url": req.url, "in_scope": in_scope}
+
+
+@router.post("/fetch-hackerone")
+async def fetch_h1_scope(handle: str):
+    """HackerOne'dan program scope'unu otomatik ceker."""
+    from app.modules.scope_fetcher import fetch_hackerone_scope
+    try:
+        return await fetch_hackerone_scope(handle)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

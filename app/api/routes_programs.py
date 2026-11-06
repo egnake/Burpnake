@@ -88,6 +88,24 @@ def get_program(pid: str):
 @router.put("/{pid}/activate")
 def set_active_program(pid: str):
     activate_program(pid)
+    conn = get_db()
+    row = conn.execute("SELECT * FROM programs WHERE id=?", (pid,)).fetchone()
+    conn.close()
+    if row:
+        prog = dict(row)
+        try:
+            scope_data = json.loads(prog.get("scope_json", "{}") or "{}")
+            include_domains = scope_data.get("include", [])
+            exclude_domains = scope_data.get("exclude", [])
+            from app.modules.scope_manager import scope_manager
+            scope_manager.set_from_domains(
+                program_name=prog.get("name", "Active Program"),
+                include_domains=include_domains,
+                exclude_domains=exclude_domains,
+                platform=prog.get("platform", "hackerone"),
+            )
+        except Exception:
+            pass
     return {"status": "activated", "program_id": pid}
 
 

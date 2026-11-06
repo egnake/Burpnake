@@ -59,6 +59,8 @@ class ScopeManager:
             "platform": self.scope.platform,
             "includes": includes,
             "excludes": excludes,
+            "include_rules": includes,
+            "exclude_rules": excludes,
             "total_rules": len(self.scope.rules),
         }
 

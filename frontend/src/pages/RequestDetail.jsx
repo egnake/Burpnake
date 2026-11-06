@@ -40,11 +40,15 @@ export default function RequestDetail() {
   const chatEndRef = useRef(null);
 
   useEffect(() => {
-    axios.get('/api/import/live-pull').then(res => {
-      const all = res.data.exchanges || [];
-      const found = all.find(e => e.id === id);
-      setExchange(found || null);
-    });
+    axios.get(`/api/import/exchange/${id}`)
+      .then(res => setExchange(res.data))
+      .catch(() => {
+        axios.get('/api/import/live-pull').then(res => {
+          const all = res.data.exchanges || [];
+          const found = all.find(e => e.id === id);
+          setExchange(found || null);
+        });
+      });
   }, [id]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);

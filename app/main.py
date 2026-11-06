@@ -42,6 +42,24 @@ async def lifespan(app: FastAPI):
     # Veritabanini baslat
     init_db()
 
+    # Aktif programin scope kurallarini ScopeManager'a yukle
+    try:
+        from app.modules.database import get_active_program
+        from app.modules.scope_manager import scope_manager
+        import json
+        active_prog = get_active_program()
+        if active_prog:
+            s_data = json.loads(active_prog.get("scope_json", "{}") or "{}")
+            scope_manager.set_from_domains(
+                program_name=active_prog.get("name", "Active Program"),
+                include_domains=s_data.get("include", []),
+                exclude_domains=s_data.get("exclude", []),
+                platform=active_prog.get("platform", "hackerone"),
+            )
+            logger.info(f"[Scope] Loaded active program: {active_prog.get('name')}")
+    except Exception as scope_err:
+        logger.warning(f"[Scope] Could not load active scope: {scope_err}")
+
     # Otonom ajan motorunu baslat
     agent = init_agent(llm_gateway, request_replayer)
     logger.info("[Agent] Autonomous hunting engine initialized")

@@ -461,6 +461,24 @@ def triage_exchange(ex: dict) -> tuple:
     if detected_tech:
         interesting_params.append("TECH:" + ",".join(detected_tech))
 
+    # === JWT DERIN ANALIZI (alg:none, zayif secret, hassas veri) ===
+    try:
+        from app.modules.jwt_analyzer import analyze_exchange_for_jwts
+        jwt_findings = analyze_exchange_for_jwts(ex)
+        for jf in jwt_findings:
+            if "jwt_detected" not in matched:
+                matched.append("jwt_detected")
+                score += RULES.get("jwt_detected", 30)
+            for issue in jf.get("issues", []):
+                if issue.get("level") == "critical":
+                    score += 85
+                    matched.append("jwt_alg_none_vulnerability")
+                elif issue.get("level") == "high":
+                    score += 50
+                    matched.append("jwt_sensitive_data_exposure")
+    except Exception:
+        pass
+
     if score >= INTEREST_THRESHOLD["critical"]:
         level = "critical"
     elif score >= INTEREST_THRESHOLD["interesting"]:

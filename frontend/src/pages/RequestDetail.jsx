@@ -15,7 +15,14 @@ const TEMPLATES = [
 
 function RawView({ b64, label }) {
   const text = React.useMemo(() => {
-    try { return atob(b64 || ''); } catch { return b64 || ''; }
+    if (!b64) return '';
+    try {
+      const binary = atob(b64);
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    } catch {
+      return b64 || '';
+    }
   }, [b64]);
   return (
     <div className="flex-1 flex flex-col min-h-0 rounded-xl border overflow-hidden"
@@ -85,6 +92,9 @@ export default function RequestDetail() {
 
   const SEV_COLOR = { critical: '#ef4444', interesting: '#f97316', low: '#eab308', normal: '#475569' };
   const borderColor = SEV_COLOR[exchange.interest_level] || '#475569';
+  const displayUrl = exchange.url && exchange.path && !exchange.url.endsWith(exchange.path)
+    ? `${exchange.url.replace(/\/$/, '')}/${exchange.path.replace(/^\//, '')}`
+    : (exchange.url || exchange.path);
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] p-4 gap-4">
@@ -94,7 +104,7 @@ export default function RequestDetail() {
           style={{ background: exchange.method === 'POST' ? '#1e3a5f' : '#1a3a2a', color: '#93c5fd' }}>
           {exchange.method}
         </span>
-        <span className="font-mono text-sm text-slate-300 truncate">{exchange.url}{exchange.path}</span>
+        <span className="font-mono text-sm text-slate-300 truncate">{displayUrl}</span>
         <span className={`ml-auto text-xs font-mono px-2 py-1 rounded`}
           style={{ color: exchange.status_code < 300 ? '#4ade80' : exchange.status_code < 400 ? '#93c5fd' : '#f87171' }}>
           {exchange.status_code}

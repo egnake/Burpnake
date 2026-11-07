@@ -28,7 +28,7 @@ async def analyze_batch(req: AnalyzeRequest):
         ]
         exchanges = [e for e in exchanges if e is not None]
     else:
-        exchanges = burp_importer.exchanges
+        exchanges = burp_importer.get_exchanges()
 
     if not exchanges:
         raise HTTPException(status_code=400, detail="No exchanges to analyze")

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Cpu, Zap, CheckCircle2, XCircle, Clock, ChevronRight, Play } from 'lucide-react';
+import { Cpu, Play } from 'lucide-react';
 
 const DECISION_ICONS = {
   try_payload: { icon: '🔄', color: '#60a5fa', label: 'Testing' },
@@ -14,49 +14,62 @@ export default function AgentLive() {
   const esRef = useRef(null);
 
   useEffect(() => {
-    const es = new EventSource('/api/stream/stream');
-    esRef.current = es;
-    es.onopen = () => setConnected(true);
-    es.onerror = () => { setConnected(false); setTimeout(() => {
-      es.close();
-      const newEs = new EventSource('/api/stream/stream');
-      esRef.current = newEs;
-    }, 3000); };
-    
-    es.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        const d = event.data || {};
-        if (!event.type?.startsWith('agent_') && event.type !== 'oob_callback_received') return;
-        
-        setSessions(prev => {
-          const eid = d.exchange_id || 'unknown';
-          const existing = prev.find(s => s.eid === eid);
-          const entry = { type: event.type, data: d, ts: event.ts, _id: Date.now() + Math.random() };
-          
-          if (existing) {
-            return prev.map(s => s.eid === eid ? {
-              ...s,
-              events: [...s.events, entry],
-              status: event.type === 'agent_confirmed_finding' ? 'confirmed' :
-                      event.type === 'agent_gave_up' ? 'gave_up' :
-                      event.type === 'agent_complete' ? (d.success ? 'confirmed' : 'done') : 'hunting',
-            } : s);
-          } else {
+    let cancelled = false;
+    let timerId = null;
+
+    function openStream() {
+      if (cancelled) return;
+      if (esRef.current) esRef.current.close();
+      const es = new EventSource('/api/stream/stream');
+      esRef.current = es;
+      es.onopen = () => {
+        if (!cancelled) setConnected(true);
+      };
+      es.onerror = () => {
+        if (cancelled) return;
+        setConnected(false);
+        es.close();
+        timerId = setTimeout(openStream, 3000);
+      };
+      es.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          const d = event.data || {};
+          if (!event.type?.startsWith('agent_') && event.type !== 'oob_callback_received') return;
+
+          setSessions(prev => {
+            const eid = d.exchange_id || d.session_id || 'unknown';
+            const existing = prev.find(s => s.eid === eid);
+            const entry = { type: event.type, data: d, ts: event.ts, _id: Date.now() + Math.random() };
+
+            if (existing) {
+              return prev.map(s => s.eid === eid ? {
+                ...s,
+                events: [...s.events, entry],
+                status: event.type === 'agent_confirmed_finding' ? 'confirmed' :
+                        event.type === 'agent_gave_up' ? 'gave_up' :
+                        event.type === 'agent_complete' ? (d.success ? 'confirmed' : 'done') : 'hunting',
+              } : s);
+            }
             return [{
               eid,
-              host: d.host || '',
-              path: d.path || '',
+              host: d.host || d.subdomain || '',
+              path: d.path || d.context || '',
               vulns: d.vulns || [],
               status: 'hunting',
               events: [entry],
             }, ...prev];
-          }
-        });
-      } catch {}
+          });
+        } catch {}
+      };
+    }
+
+    openStream();
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+      esRef.current?.close();
     };
-    
-    return () => es.close();
   }, []);
 
   useEffect(() => {

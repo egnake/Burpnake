@@ -32,7 +32,12 @@ async def generate_report(finding: dict, exchange: dict, platform: str = "hacker
             res_text = ""
 
         method = exchange.get("method", "GET")
-        url = exchange.get("url", "") + exchange.get("path", "")
+        url_base = exchange.get("url", "") or ""
+        path_part = exchange.get("path", "") or ""
+        if url_base and path_part and not url_base.endswith(path_part):
+            url = url_base.rstrip("/") + "/" + path_part.lstrip("/")
+        else:
+            url = url_base or path_part
 
         # Taxonomy & Remediation Blueprint
         blueprint = remediation_engine.get_blueprint(vuln_type or title)

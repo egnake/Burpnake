@@ -1,11 +1,12 @@
-import asyncio, json, logging, re, base64
+import asyncio, json, logging, re, base64, time
 from typing import Optional
+from app.config import settings
 
 logger = logging.getLogger("burpnake.agent")
 
-MAX_ITERATIONS = 5
-ITER_DELAY = 2.0
-AGENT_TIMEOUT = 600
+MAX_ITERATIONS = settings.AGENT_MAX_ITERATIONS or 5
+ITER_DELAY = settings.AGENT_ITER_DELAY
+AGENT_TIMEOUT = settings.AGENT_TIMEOUT or 600
 
 class AgentResult:
     def __init__(self, success, finding_id, iterations, summary, payload_history):
@@ -48,7 +49,7 @@ Output ONLY valid JSON with these EXACT fields (no markdown blocks around it):
   "poc_curl": "A working curl command that proves the finding (only if confirmed)",
   "poc_python": "A working python requests script (only if confirmed)",
   "severity": "critical|high|medium|low",
-  "bounty_estimate": "-"
+  "bounty_estimate": "$1,000 - $10,000"
 }
 
 NOTE: You can provide EITHER 'payload_modifications' (for a single request) OR 'macro_modifications' (a JSON array for multi-step stateful attacks where cookies/sessions are preserved between steps). DO NOT provide both.
@@ -217,10 +218,12 @@ class AutonomousAgent:
                 if not mods and not macros:
                     continue
                 try:
+                    t0 = time.perf_counter()
                     if macros:
                         new_req_text, new_res_text = await _send_macro_requests(ex, macros, current_req_text)
                     else:
                         new_req_text, new_res_text = await _send_modified_request(ex, mods, current_req_text)
+                    elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
                     current_req_text = new_req_text
                     current_res_text = new_res_text
@@ -230,11 +233,12 @@ class AutonomousAgent:
                     # Kör diferansiyel anomali tespiti (ResponseDiffer)
                     try:
                         from app.modules.response_differ import response_differ
-                        base_feat = response_differ.extract_features(res_text, ex.get("status_code", 0))
-                        new_feat = response_differ.extract_features(new_res_text, 200)
+                        new_status = _parse_status_from_raw(new_res_text)
+                        base_feat = response_differ.extract_features(res_text, ex.get("status_code", 0), 0)
+                        new_feat = response_differ.extract_features(new_res_text, new_status, elapsed_ms)
                         diff = response_differ.compare(base_feat, new_feat)
                         if diff.get("is_anomaly") and not auto_confirmed:
-                            system_override = f"\n\n[ANOMALY DETECTED] Response differ: {diff.get('reason')}. Length delta: {diff.get('length_diff')}, Word count delta: {diff.get('word_count_diff')}."
+                            system_override = f"\n\n[ANOMALY DETECTED] Response differ: {diff.get('reason')}. Length delta: {diff.get('length_diff')}, Word count delta: {diff.get('word_count_diff')}, Duration: {round(elapsed_ms)}ms."
                     except Exception:
                         pass
 
@@ -445,8 +449,8 @@ def _decode_b64(b64_str):
         return b64_str or ""
 
 def _parse_agent_json(raw):
-    raw = re.sub(r"^`(?:json)?\s*", "", raw, flags=re.MULTILINE)
-    raw = re.sub(r"`\s*$", "", raw, flags=re.MULTILINE)
+    raw = re.sub(r"^`{1,3}(?:json)?\s*", "", raw, flags=re.MULTILINE)
+    raw = re.sub(r"`{1,3}\s*$", "", raw, flags=re.MULTILINE)
     raw = raw.strip()
 
     m = re.search(r'\{[\s\S]*\}', raw)
@@ -459,6 +463,13 @@ def _parse_agent_json(raw):
     if "confirmed" in raw.lower() and "unconfirmed" not in raw.lower() and "not confirmed" not in raw.lower():
         return {"decision": "confirmed", "reasoning": raw[:500], "payload_modifications": {}}
     return {"decision": "give_up", "reasoning": f"Cannot parse JSON: {raw[:200]}", "payload_modifications": {}}
+
+def _parse_status_from_raw(raw):
+    first_line = (raw or "").split("\n", 1)[0].strip()
+    parts = first_line.split(" ", 2)
+    if len(parts) >= 2 and parts[1].isdigit():
+        return int(parts[1])
+    return 200
 
 def _check_success_indicators(response_text, indicators):
     if not indicators:
@@ -507,34 +518,34 @@ def _build_finding_report(title, reasoning, history, poc_curl, poc_python, bount
 {hist_md}
 
 ## 📤 Orijinal İstek
-`http
+```http
 {orig_req[:1500]}
-`
+```
 
 ## 📥 Orijinal Yanıt
-`http
+```http
 {orig_res[:1500]}
-`
+```
 
 ## 🎯 Açığı Doğrulayan Son İstek
-`http
+```http
 {final_req[:1500]}
-`
+```
 
 ## ✅ Açığı Doğrulayan Son Yanıt
-`http
+```http
 {final_res[:1500]}
-`
+```
 
 ## 🛠️ PoC — cURL
-`ash
+```bash
 {poc_curl}
-`
+```
 
 ## 🐍 PoC — Python
-`python
+```python
 {poc_python}
-`
+```
 '''
 
 autonomous_agent: AutonomousAgent | None = None

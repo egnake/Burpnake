@@ -19,12 +19,39 @@ class BurpImporter:
         self._next_id: int = 1
 
     def _persist_to_db(self, ex: HttpExchange):
-        """Import edilen istegi SQLite veritabanina da kaydeder."""
+        """Import edilen istegi SQLite veritabanina da kaydeder ve anlik triage uygular."""
         try:
             from app.modules.database import save_exchange
-            req_b64 = base64.b64encode(ex.request.raw.encode()).decode() if ex.request.raw else ""
-            res_b64 = base64.b64encode(ex.response.raw.encode()).decode() if ex.response.raw else ""
-            save_exchange({
+            from app.modules.passive_analyzer import triage_exchange
+
+            req_raw = ex.request.raw
+            if not req_raw:
+                req_lines = [f"{ex.request.method} {ex.request.path or '/'} {ex.request.http_version}"]
+                if ex.request.host and not any(h.name.lower() == "host" for h in ex.request.headers):
+                    req_lines.append(f"Host: {ex.request.host}")
+                for h in ex.request.headers:
+                    req_lines.append(f"{h.name}: {h.value}")
+                req_lines.append("")
+                if ex.request.body:
+                    req_lines.append(ex.request.body)
+                req_raw = "\r\n".join(req_lines)
+
+            res_raw = ex.response.raw
+            if not res_raw and ex.response.status_code:
+                res_lines = [f"{ex.response.http_version} {ex.response.status_code} {ex.response.status_text}".strip()]
+                for h in ex.response.headers:
+                    res_lines.append(f"{h.name}: {h.value}")
+                res_lines.append("")
+                if ex.response.body:
+                    res_lines.append(ex.response.body)
+                res_raw = "\r\n".join(res_lines)
+
+            req_b64 = base64.b64encode(req_raw.encode("utf-8", errors="replace")).decode() if req_raw else ""
+            res_b64 = base64.b64encode(res_raw.encode("utf-8", errors="replace")).decode() if res_raw else ""
+            req_hdrs = {h.name: h.value for h in ex.request.headers}
+            res_hdrs = {h.name: h.value for h in ex.response.headers}
+
+            raw_dict = {
                 "id": str(ex.id),
                 "host": ex.request.host,
                 "url": ex.request.url,
@@ -33,10 +60,17 @@ class BurpImporter:
                 "status_code": ex.response.status_code,
                 "request_b64": req_b64,
                 "response_b64": res_b64,
-                "request_headers": {h.name: h.value for h in ex.request.headers},
-                "response_headers": {h.name: h.value for h in ex.response.headers},
-                "interest_level": "pending",
-                "score": 0,
+                "request_headers": req_hdrs,
+                "response_headers": res_hdrs,
+            }
+            level, reason, params, score, matched = triage_exchange(raw_dict)
+            save_exchange({
+                **raw_dict,
+                "interest_level": level,
+                "interest_reason": reason,
+                "interesting_params": params,
+                "tags": matched,
+                "score": score,
             })
         except Exception:
             pass
@@ -63,21 +97,31 @@ class BurpImporter:
         except Exception:
             res_h_dict = {}
 
-        req_headers = [HttpHeader(name=k, value=str(v)) for k, v in req_h_dict.items()]
-        res_headers = [HttpHeader(name=k, value=str(v)) for k, v in res_h_dict.items()]
+        parsed_req = parse_raw_request(req_raw) if req_raw else HttpRequest()
+        parsed_res = parse_raw_response(res_raw) if res_raw else HttpResponse()
+
+        req_headers = parsed_req.headers or [HttpHeader(name=k, value=str(v)) for k, v in req_h_dict.items()]
+        res_headers = parsed_res.headers or [HttpHeader(name=k, value=str(v)) for k, v in res_h_dict.items()]
 
         req = HttpRequest(
             id=str(row.get("id")),
-            method=row.get("method") or "GET",
-            url=row.get("url") or "",
-            path=row.get("path") or "",
-            host=row.get("host") or "",
+            method=row.get("method") or parsed_req.method or "GET",
+            url=row.get("url") or parsed_req.url or "",
+            path=row.get("path") or parsed_req.path or "",
+            host=row.get("host") or parsed_req.host or "",
             headers=req_headers,
+            body=parsed_req.body,
+            content_type=parsed_req.content_type,
+            cookies=parsed_req.cookies,
             raw=req_raw,
         )
         res = HttpResponse(
-            status_code=row.get("status_code") or 0,
+            status_code=row.get("status_code") or parsed_res.status_code or 0,
+            status_text=parsed_res.status_text,
             headers=res_headers,
+            body=parsed_res.body,
+            content_type=parsed_res.content_type,
+            content_length=parsed_res.content_length,
             raw=res_raw,
         )
         return HttpExchange(
@@ -179,11 +223,12 @@ class BurpImporter:
 
     def get_summary(self) -> dict:
         """Get import summary statistics."""
+        items = self.get_exchanges()
         methods: dict[str, int] = {}
         status_codes: dict[int, int] = {}
         hosts: set[str] = set()
 
-        for ex in self.exchanges:
+        for ex in items:
             methods[ex.request.method] = methods.get(ex.request.method, 0) + 1
             sc = ex.response.status_code
             status_codes[sc] = status_codes.get(sc, 0) + 1
@@ -191,16 +236,16 @@ class BurpImporter:
                 hosts.add(ex.request.host)
 
         return {
-            "total_exchanges": len(self.exchanges),
+            "total_exchanges": len(items),
             "methods": methods,
             "status_codes": status_codes,
             "unique_hosts": list(hosts),
-            "with_params": sum(1 for e in self.exchanges if e.request.has_params),
+            "with_params": sum(1 for e in items if e.request.has_params),
         }
 
     def list_exchanges(self, limit: int = 50) -> list[str]:
         """Get a human-readable list of exchanges."""
-        return [ex.summary for ex in self.exchanges[:limit]]
+        return [ex.summary for ex in self.get_exchanges()[:limit]]
 
     def clear(self) -> None:
         """Clear all imported data."""

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShieldAlert, CheckCircle, X, FileText, ChevronDown, Shield } from 'lucide-react';
+import { ShieldAlert, CheckCircle, X, FileText, Shield } from 'lucide-react';
 
 const SEV_COLORS = {
   critical: { bg: '#7f1d1d', text: '#fca5a5', border: '#ef4444' },
@@ -46,8 +46,6 @@ export default function Findings() {
   const [reportLoading, setReportLoading] = useState('');
   const [valLoading, setValLoading] = useState('');
 
-  useEffect(() => { loadFindings(); }, [filter]);
-
   const loadFindings = async () => {
     setLoading(true);
     try {
@@ -58,6 +56,23 @@ export default function Findings() {
     finally { setLoading(false); }
   };
 
+  useEffect(() => {
+    let active = true;
+    const params = filter !== 'all' ? { severity: filter } : {};
+    axios
+      .get('/api/findings/', { params })
+      .then(res => {
+        if (active) setFindings(res.data.findings || []);
+      })
+      .catch(e => console.error(e))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [filter]);
+
   const validate = async (id) => {
     setValLoading(id);
     try {
@@ -65,7 +80,7 @@ export default function Findings() {
       const details = (res.data.results || []).map(r => `${r.passed ? '✓' : '✗'} ${r.stage}: ${r.details}`).join('\n');
       alert(`7 Aşamalı Doğrulama Sonucu:\nGüven Düzeyi: ${res.data.confidence?.toUpperCase()}\n\n${details}`);
       await loadFindings();
-    } catch (e) {
+    } catch {
       alert('Doğrulama başarısız.');
     } finally {
       setValLoading('');
@@ -87,7 +102,7 @@ export default function Findings() {
     try {
       const res = await axios.get(`/api/findings/${id}/report?platform=hackerone`);
       setReport(res.data.report);
-    } catch (e) { alert('Rapor oluşturulamadı.'); }
+    } catch { alert('Rapor oluşturulamadı.'); }
     finally { setReportLoading(''); }
   };
 
@@ -109,7 +124,7 @@ export default function Findings() {
           const col = SEV_COLORS[f] || SEV_COLORS.info;
           const isActive = filter === f;
           return (
-            <button key={f} onClick={() => setFilter(f)}
+            <button key={f} onClick={() => { if (filter !== f) { setLoading(true); setFilter(f); } }}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize"
               style={{
                 background: isActive ? col.border : 'transparent',

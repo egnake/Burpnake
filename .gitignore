@@ -15,12 +15,17 @@ frontend/.npm/
 frontend/.env*
 frontend/.eslintcache
 
-# Database (Do not upload local traffic/findings!)
+# Database & local generated reports (Do not upload local traffic/findings!)
 data/*.db
+data/*.db-wal
+data/*.db-shm
 data/*.sqlite
 data/*.sqlite3
 data/*.backup
+data/reports/
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 

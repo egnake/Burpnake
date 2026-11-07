@@ -1,8 +1,7 @@
-﻿# ============================================================
+# ============================================================
 # BurpNake — Docker Compose
 # Tek komutla her PC'de calistirir: docker compose up --build
 # ============================================================
-version: '3.9'
 
 services:
 
@@ -14,14 +13,15 @@ services:
     container_name: burpnake_backend
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       # Docker icinde 0.0.0.0 olmali — .env'i override et
       - APP_HOST=0.0.0.0
       - APP_PORT=8899
       # Ollama host.docker.internal ile erisim (Docker Desktop Windows/Mac)
       # Linux icin: host-gateway eklendi
-      - OLLAMA_BASE_URL=
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     ports:
       - "8899:8899"
     volumes:

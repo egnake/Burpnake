@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, ShieldAlert, Eye, Activity, Filter, Trash2, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Radio, Activity, Filter, Trash2, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 const TYPE_CONFIG = {
   connected:               { color: '#4ade80', icon: '📡', label: 'Connection' },
@@ -27,34 +27,49 @@ export default function LiveFeed() {
   const esRef = useRef(null);
 
   useEffect(() => {
-    connect();
-    return () => esRef.current?.close();
+    let cancelled = false;
+    let timerId = null;
+
+    function openStream() {
+      if (cancelled) return;
+      if (esRef.current) esRef.current.close();
+      const es = new EventSource('/api/stream/stream');
+      esRef.current = es;
+
+      es.onopen = () => {
+        if (!cancelled) setConnected(true);
+      };
+      es.onerror = () => {
+        if (cancelled) return;
+        setConnected(false);
+        es.close();
+        timerId = setTimeout(openStream, 3000);
+      };
+
+      es.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          setEvents(prev => [...prev.slice(-499), { ...event, id: Date.now() + Math.random() }]);
+          setStats(prev => ({
+            total: prev.total + (event.type === 'new_exchange' ? 1 : 0),
+            interesting: prev.interesting + (event.type === 'new_interesting_request' ? 1 : 0),
+            findings: prev.findings + (['new_finding', 'agent_confirmed_finding'].includes(event.type) ? 1 : 0),
+          }));
+        } catch {}
+      };
+    }
+
+    openStream();
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+      esRef.current?.close();
+    };
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [events]);
-
-  const connect = () => {
-    if (esRef.current) esRef.current.close();
-    const es = new EventSource('/api/stream/stream');
-    esRef.current = es;
-
-    es.onopen = () => setConnected(true);
-    es.onerror = () => { setConnected(false); setTimeout(connect, 3000); };
-
-    es.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        setEvents(prev => [...prev.slice(-499), { ...event, id: Date.now() + Math.random() }]);
-        setStats(prev => ({
-          total: prev.total + (event.type === 'new_exchange' ? 1 : 0),
-          interesting: prev.interesting + (event.type === 'new_interesting_request' ? 1 : 0),
-          findings: prev.findings + (event.type === 'new_finding' ? 1 : 0),
-        }));
-      } catch {}
-    };
-  };
 
   const filtered = filter === 'all' ? events : events.filter(e => e.type === filter);
 

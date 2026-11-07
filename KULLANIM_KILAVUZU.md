@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <h1>BurpNake Kullanım Kılavuzu</h1>
   <p><b>Otonom Yapay Zeka Destekli Bug Bounty ve Sızma Testi Platformu</b></p>
 </div>
@@ -55,22 +55,22 @@ Platformun sorunsuz çalışabilmesi için aşağıdaki yazılımların sistemin
 Tüm mimariyi tek bir komutla ve izole bir biçimde ayağa kaldırmak için en güvenilir yöntemdir.
 
 1. Repoyu bilgisayarınıza klonlayın:
-   \\\ash
+   ```bash
    git clone https://github.com/egnake/Burpnake.git
    cd Burpnake
-   \\\
+   ```
 2. Ortam değişkenlerini hazırlayın:
-   \\\ash
+   ```bash
    cp .env.example .env
-   \\\
-   Oluşturulan \.env\ dosyasını düzenleyerek kullanmak istediğiniz LLM sağlayıcısının API anahtarını veya yerel adresini girin.
+   ```
+   Oluşturulan `.env` dosyasını düzenleyerek kullanmak istediğiniz LLM sağlayıcısının API anahtarını veya yerel adresini girin.
 3. Konteynerleri inşa edip başlatın:
-   \\\ash
-   docker-compose up --build
-   \\\
+   ```bash
+   docker compose up --build
+   ```
 4. Platforma tarayıcınızdan erişin:
-   * **Gösterge Paneli (Dashboard):** \http://localhost:3000\
-   * **API Dokümantasyonu:** \http://localhost:8899/docs\
+   * **Gösterge Paneli (Dashboard):** `http://localhost:3000`
+   * **API Dokümantasyonu:** `http://localhost:8899/docs`
 
 ### Manuel (Yerel) Kurulum
 
@@ -78,35 +78,35 @@ Sistemi kendi ana makinenizde (bare metal) çalıştırmak isterseniz aşağıda
 
 #### Arka Uç (Backend) Kurulumu
 1. Proje kök dizininde bir sanal ortam oluşturun:
-   \\\ash
+   ```bash
    python -m venv venv
-   \\\
+   ```
 2. Sanal ortamı aktif hale getirin:
-   * Windows: \.\venv\Scripts\activate\
-   * Linux / macOS: \source venv/bin/activate\
+   * Windows: `.\venv\Scripts\activate`
+   * Linux / macOS: `source venv/bin/activate`
 3. Gerekli kütüphaneleri yükleyin:
-   \\\ash
+   ```bash
    pip install -r requirements.txt
-   \\\
-4. \.env.example\ dosyasını \.env\ olarak kopyalayıp yapılandırın.
+   ```
+4. `.env.example` dosyasını `.env` olarak kopyalayıp yapılandırın.
 5. Sunucuyu başlatın:
-   \\\ash
+   ```bash
    python run.py
-   \\\
+   ```
 
 #### Ön Yüz (Frontend) Kurulumu
-1. Yeni bir terminal açarak \rontend\ klasörüne geçin:
-   \\\ash
+1. Yeni bir terminal açarak `frontend` klasörüne geçin:
+   ```bash
    cd frontend
-   \\\
+   ```
 2. Bağımlılıkları yükleyin:
-   \\\ash
+   ```bash
    npm install
-   \\\
+   ```
 3. Geliştirici sunucusunu başlatın:
-   \\\ash
+   ```bash
    npm run dev
-   \\\
+   ```
 
 ---
 
@@ -118,23 +118,23 @@ BurpNake, trafik verisini canlı olarak almak için kendi özel Burp Suite eklen
 2. Burp Suite'te **Extensions** sekmesine, ardından **Installed** alt sekmesine gidin.
 3. **Add** butonuna tıklayın.
 4. **Extension type** açılır menüsünden **Java** seçeneğini işaretleyin.
-5. **Extension file (.jar)** bölümünde klonladığınız dizindeki \connector/BurpNakeConnector.jar\ dosyasını seçin.
+5. **Extension file (.jar)** bölümünde klonladığınız dizindeki `connector/BurpNakeConnector.jar` dosyasını seçin.
 6. **Next** diyerek eklentiyi yükleyin. Çıktı ekranında BurpNake sunucusuna (8899 portu) bağlantının başarılı olduğuna dair mesajı görmelisiniz.
 
 ---
 
 ## 6. Yapay Zeka (LLM) Konfigürasyonu
 
-BurpNake'in otonom ajanları, analiz ve karar alma süreçleri için bir Büyük Dil Modeline (LLM) ihtiyaç duyar. \.env\ dosyası üzerinden aşağıdaki sağlayıcılardan birini veya birkaçını yapılandırabilirsiniz:
+BurpNake'in otonom ajanları, analiz ve karar alma süreçleri için bir Büyük Dil Modeline (LLM) ihtiyaç duyar. `.env` dosyası üzerinden aşağıdaki sağlayıcılardan birini veya birkaçını yapılandırabilirsiniz:
 
 * **Ollama (Yerel ve Gizli Yürütme):** Trafiğinizin ve bulgularınızın internete çıkmasını istemediğiniz yüksek güvenlikli hedefler için önerilir.
-  * Ollama'yı kurun ve bir kod modeli indirin (Ör: \ollama pull qwen2.5-coder:14b\).
-  * \.env\ dosyasına şu satırı ekleyin: \OLLAMA_BASE_URL=http://localhost:11434\
+  * Ollama'yı kurun ve bir kod modeli indirin (Ör: `ollama pull qwen2.5-coder:14b`).
+  * `.env` dosyasına şu satırı ekleyin: `OLLAMA_BASE_URL=http://localhost:11434`
 * **Gemini (Bulut Tabanlı):** Karmaşık DOM yapısını anlama ve uzun metinleri (Long Context) işleme kapasitesi sebebiyle en yüksek verimi sunar.
   * Google AI Studio üzerinden bir API anahtarı edinin.
-  * \.env\ dosyasına şu satırı ekleyin: \GEMINI_API_KEY=api_anahtariniz\
+  * `.env` dosyasına şu satırı ekleyin: `GEMINI_API_KEY=api_anahtariniz`
 * **G4F (Ücretsiz Alternatif):** Elinizde herhangi bir API anahtarı bulunmuyorsa, topluluk destekli ücretsiz API ağ geçitlerini kullanabilirsiniz.
-  * \.env\ dosyasına şu satırı ekleyin: \G4F_ENABLED=true\ (Not: İstikrarı diğer yöntemlere göre daha düşüktür).
+  * `.env` dosyasına şu satırı ekleyin: `G4F_ENABLED=true` (Not: İstikrarı diğer yöntemlere göre daha düşüktür).
 
 ---
 

@@ -85,17 +85,18 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
         if (messages == null || messages.length == 0) return menu;
 
         JMenuItem sendItem = new JMenuItem("[BurpNake] Bunu AI ile Analiz Et");
-        sendItem.addActionListener(e -> new Thread(() -> {
+        sendItem.addActionListener(e -> threadPool.submit(() -> {
             try {
                 String result = sendToBurpNake(messages[0], true);
                 applyHighlight(messages[0], result);
-                JOptionPane.showMessageDialog(null,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
                     "BurpNake'e gonderildi!\nDashboard > AI Hunter'dan sonuclari goruntule.",
-                    "BurpNake", JOptionPane.INFORMATION_MESSAGE);
+                    "BurpNake", JOptionPane.INFORMATION_MESSAGE));
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Hata: " + ex.getMessage(), "BurpNake", JOptionPane.ERROR_MESSAGE);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
+                    "Hata: " + ex.getMessage(), "BurpNake", JOptionPane.ERROR_MESSAGE));
             }
-        }).start());
+        }));
 
         menu.add(sendItem);
         return menu;
@@ -166,13 +167,20 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
         }
 
         // Cevabi oku
+        int respCode = conn.getResponseCode();
+        InputStream stream = (respCode >= 200 && respCode < 400) ? conn.getInputStream() : conn.getErrorStream();
         StringBuilder sb = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
+        if (stream != null) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+            }
         }
         conn.disconnect();
+        if (respCode >= 400) {
+            throw new IOException("HTTP " + respCode + ": " + sb.toString());
+        }
 
         // "interest_level" alanini JSON'dan cek (basit parse)
         String body = sb.toString();
@@ -206,7 +214,7 @@ public class BurpExtender implements IBurpExtender, IHttpListener, IContextMenuF
     private String escape(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\r", "\\r");
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     // --- Burp Suite Sekmesi (UI) ---

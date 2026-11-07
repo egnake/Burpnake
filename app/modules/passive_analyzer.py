@@ -282,7 +282,7 @@ def triage_exchange(ex: dict) -> tuple:
             
     for p in JWT_VULN_PATTERNS:
         if re.search(p, full, re.IGNORECASE):
-            score += 95; matched.append("jwt_alg_none_candidate"); break
+            score += 95; matched.extend(["jwt_alg_none_candidate", "jwt_vuln_candidate"]); break
             
     for p in OAUTH_PATTERNS:
         if re.search(p, url, re.IGNORECASE):
@@ -307,8 +307,14 @@ def triage_exchange(ex: dict) -> tuple:
         if re.search(p, full, re.IGNORECASE):
             score += 85; matched.append("esi_ssi_injection_candidate"); break
             
+    res_hdr_str = json.dumps(ex.get("response_headers") or {}).lower()
     for p in JSONP_PATTERNS:
-        if re.search(p, url, re.IGNORECASE) and "application/json" in res_text[:2000].lower():
+        if re.search(p, url, re.IGNORECASE) and (
+            "application/json" in res_text[:2000].lower()
+            or "javascript" in res_text[:2000].lower()
+            or "application/json" in res_hdr_str
+            or "javascript" in res_hdr_str
+        ):
             score += 70; matched.append("jsonp_hijacking_candidate"); break
             
     for p in NGINX_OFF_BY_SLASH:
@@ -550,7 +556,7 @@ Write the report in a highly technical, concise, and professional tone, starting
 """
 
 
-async def weaponize_payload(llm_gateway, fid, title, ai_reasoning):
+async def weaponize_payload(llm_gateway, fid, title, ai_reasoning, ex: dict | None = None):
     from app.modules.event_broadcaster import broadcast
     from app.modules.database import get_db
     
@@ -565,9 +571,15 @@ Include advanced features like threading for brute-force or WAF bypass headers."
         weapon = await asyncio.wait_for(llm_gateway.generate(weapon_prompt), timeout=60)
         
         # Save the weaponized script to the finding
-        with get_db() as db:
-            db.execute("UPDATE findings SET steps_to_test = steps_to_test || ? WHERE id = ?", ("\n\n### WEAPONIZED EXPLOIT SCRIPT ###\n```python\n" + weapon + "\n```\n", fid))
-            db.commit()
+        conn = get_db()
+        try:
+            conn.execute(
+                "UPDATE findings SET steps_to_test = steps_to_test || ? WHERE id = ?",
+                ("\n\n### WEAPONIZED EXPLOIT SCRIPT ###\n```python\n" + weapon + "\n```\n", fid),
+            )
+            conn.commit()
+        finally:
+            conn.close()
             
         await broadcast("weaponization_ready", {
             "finding_id": fid,

@@ -6,10 +6,6 @@ export default function AIHunter() {
   const [loading, setLoading] = useState(true);
   const [hunting, setHunting] = useState(false);
 
-  useEffect(() => {
-    fetchQueue();
-  }, []);
-
   const fetchQueue = () => {
     setLoading(true);
     fetch('/api/agent/auto-hunt-queue')
@@ -20,6 +16,24 @@ export default function AIHunter() {
       })
       .catch(() => setLoading(false));
   };
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/agent/auto-hunt-queue')
+      .then(r => r.json())
+      .then(d => {
+        if (active) {
+          setQueue(d.queue || []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const startAutoHunt = () => {
     setHunting(true);

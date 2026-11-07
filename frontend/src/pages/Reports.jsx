@@ -47,20 +47,25 @@ const SEV_COLORS = {
 export default function Reports() {
   const [findings, setFindings] = useState([]);
   const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [platform, setPlatform] = useState('hackerone');
   const [genLoading, setGenLoading] = useState('');
 
-  useEffect(() => { loadFindings(); }, []);
-
-  const loadFindings = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get('/api/findings/');
-      setFindings(res.data.findings || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+  useEffect(() => {
+    let active = true;
+    axios
+      .get('/api/findings/')
+      .then(res => {
+        if (active) setFindings(res.data.findings || []);
+      })
+      .catch(e => console.error(e))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const generateReport = async (fid) => {
     setGenLoading(fid);
@@ -94,6 +99,8 @@ export default function Reports() {
           </select>
         </div>
       </div>
+
+      {loading && <div className="text-center py-8 text-slate-400 text-sm">Yükleniyor...</div>}
 
       {/* Onaylanmış Bulgular */}
       <div className="mb-8">

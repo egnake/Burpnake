@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Target, Plus, Trash2, CheckCircle, Globe, ChevronRight } from 'lucide-react';
+import { Target, Plus, Trash2, CheckCircle, Globe } from 'lucide-react';
 
 const PLATFORM_LABELS = { hackerone: 'HackerOne', bugcrowd: 'Bugcrowd', yeswehack: 'YesWeHack', manual: 'Manuel' };
 const PLATFORM_COLORS = { hackerone: '#f26722', bugcrowd: '#028900', yeswehack: '#1c2b4b', manual: '#6366f1' };
@@ -13,14 +13,25 @@ export default function Programs() {
   const [fetchedScope, setFetchedScope] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => { loadPrograms(); }, []);
-
   const loadPrograms = async () => {
     try {
       const res = await axios.get('/api/programs/');
       setPrograms(res.data.programs || []);
     } catch (e) { console.error(e); }
   };
+
+  useEffect(() => {
+    let active = true;
+    axios
+      .get('/api/programs/')
+      .then(res => {
+        if (active) setPrograms(res.data.programs || []);
+      })
+      .catch(e => console.error(e));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const fetchScope = async () => {
     if (!handle.trim()) return;
@@ -41,7 +52,7 @@ export default function Programs() {
       await axios.post('/api/programs/', { name: handle || 'Manuel Program', platform: 'manual', include_domains: [], exclude_domains: [] });
       await loadPrograms();
       setHandle('');
-    } catch (e) { setError('Oluşturma başarısız.'); }
+    } catch { setError('Oluşturma başarısız.'); }
     finally { setLoading(false); }
   };
 

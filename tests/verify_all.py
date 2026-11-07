@@ -165,8 +165,12 @@ def test_suite():
     print("\n" + "=" * 60)
     print(f"VERIFICATION SUMMARY: {passed} PASSED, {failed} FAILED")
     print("=" * 60)
-    return failed == 0
+    assert failed == 0, f"{failed} verification checks failed"
+
 
 if __name__ == "__main__":
-    success = test_suite()
-    sys.exit(0 if success else 1)
+    try:
+        test_suite()
+        sys.exit(0)
+    except AssertionError:
+        sys.exit(1)

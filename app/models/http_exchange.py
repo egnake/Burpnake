@@ -1,7 +1,8 @@
 """HTTP exchange data models for Burp Suite data."""
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
+import json
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -15,6 +16,11 @@ class HttpHeader(BaseModel):
 class HttpRequest(BaseModel):
     """Parsed HTTP request."""
     id: str = ""
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _coerce_id(cls, v: object) -> str:
+        return "" if v is None else str(v)
     method: str = "GET"
     url: str = ""
     path: str = ""
@@ -41,10 +47,17 @@ class HttpRequest(BaseModel):
             for pair in query.split("&"):
                 if "=" in pair:
                     params.append(pair.split("=", 1)[0])
-        if self.body and "=" in self.body:
+        if self.body and "=" in self.body and not self.body.lstrip().startswith("{"):
             for pair in self.body.split("&"):
                 if "=" in pair:
                     params.append(pair.split("=", 1)[0])
+        elif self.body and self.body.lstrip().startswith("{"):
+            try:
+                parsed_json = json.loads(self.body)
+                if isinstance(parsed_json, dict):
+                    params.extend(str(k) for k in parsed_json.keys())
+            except Exception:
+                pass
         return ", ".join(params) if params else "none"
 
     def get_header(self, name: str) -> Optional[str]:
@@ -75,6 +88,11 @@ class HttpResponse(BaseModel):
 class HttpExchange(BaseModel):
     """A complete HTTP request-response pair from Burp Suite."""
     id: str = ""
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _coerce_exchange_id(cls, v: object) -> str:
+        return "" if v is None else str(v)
     request: HttpRequest = Field(default_factory=HttpRequest)
     response: HttpResponse = Field(default_factory=HttpResponse)
     timestamp: Optional[datetime] = None

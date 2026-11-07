@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Copy, Check, Sparkles, BookOpen, Code2 } from 'lucide-react';
+import { Shield, Copy, Check } from 'lucide-react';
 import axios from 'axios';
 
 const METRICS_DEF = [
@@ -99,17 +99,19 @@ export default function CVSSCalculator() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    calculateScore(metrics);
+    let active = true;
+    axios
+      .post('/api/cvss/calculate', metrics)
+      .then(res => {
+        if (active) setResult(res.data);
+      })
+      .catch(e => {
+        console.error(e);
+      });
+    return () => {
+      active = false;
+    };
   }, [metrics]);
-
-  const calculateScore = async (currentMetrics) => {
-    try {
-      const res = await axios.post('/api/cvss/calculate', currentMetrics);
-      setResult(res.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handleMetricChange = (key, val) => {
     setMetrics(prev => ({ ...prev, [key]: val }));

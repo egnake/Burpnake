@@ -86,7 +86,10 @@ def parse_raw_response(raw: str) -> HttpResponse:
     first_line = lines[0].strip()
     parts = first_line.split(" ", 2)
     http_version = parts[0] if len(parts) > 0 else "HTTP/1.1"
-    status_code = int(parts[1]) if len(parts) > 1 else 0
+    try:
+        status_code = int(parts[1]) if len(parts) > 1 else 0
+    except ValueError:
+        status_code = 0
     status_text = parts[2] if len(parts) > 2 else ""
 
     # Parse headers and body

@@ -45,6 +45,17 @@ class RequestReplayer:
             url += f":{req.port}"
         url += mods.get("path", req.path)
 
+        if not mods.get("ignore_scope"):
+            from app.modules.scope_manager import scope_manager
+            if not scope_manager.is_in_scope(url):
+                return HttpExchange(
+                    id=exchange.id,
+                    request=exchange.request,
+                    response=HttpResponse(status_code=403, status_text=f"Scope violation: {url}"),
+                    source="replay_error",
+                    notes=f"Scope violation: {url}",
+                )
+
         # Build headers
         headers = {h.name: h.value for h in req.headers}
         headers.update(mods.get("headers", {}))
@@ -54,12 +65,14 @@ class RequestReplayer:
         # Build body
         body = mods.get("body", req.body)
         method = mods.get("method", req.method)
+        params = mods.get("params")
 
         try:
             resp = await client.request(
                 method=method,
                 url=url,
                 headers=headers,
+                params=params,
                 content=body.encode() if body else None,
             )
 

@@ -3,7 +3,19 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Search, Tag, ArrowRight, AlertTriangle } from 'lucide-react';
 
-const RISKY_PARAMS = ['id','user_id','uid','admin','role','redirect','url','file','path','cmd','exec','system','token','key','secret','callback','next','return'];
+function buildParamMap(exchanges) {
+  const map = {};
+  for (const ex of exchanges) {
+    let params = [];
+    try { params = JSON.parse(ex.interesting_params || '[]'); } catch { params = []; }
+    params = params.filter(p => !p.startsWith('TECH:'));
+    for (const p of params) {
+      if (!map[p]) map[p] = [];
+      map[p].push({ exchange_id: ex.id, path: ex.path, method: ex.method, host: ex.host });
+    }
+  }
+  return map;
+}
 
 function riskLevel(param) {
   const p = param.toLowerCase();
@@ -28,27 +40,30 @@ export default function ParamDiscovery() {
   const [loading, setLoading]     = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => { load(); }, []);
-
   const load = async () => {
     setLoading(true);
     try {
       const res = await axios.get('/api/import/live-pull');
-      const exchanges = res.data.exchanges || [];
-      const map = {};
-      for (const ex of exchanges) {
-        let params = [];
-        try { params = JSON.parse(ex.interesting_params || '[]'); } catch { params = []; }
-        params = params.filter(p => !p.startsWith('TECH:'));
-        for (const p of params) {
-          if (!map[p]) map[p] = [];
-          map[p].push({ exchange_id: ex.id, path: ex.path, method: ex.method, host: ex.host });
-        }
-      }
-      setParamMap(map);
+      setParamMap(buildParamMap(res.data.exchanges || []));
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    let active = true;
+    axios
+      .get('/api/import/live-pull')
+      .then(res => {
+        if (active) setParamMap(buildParamMap(res.data.exchanges || []));
+      })
+      .catch(e => console.error(e))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Parametre listesi: frekansa gore sirala
   const sorted = Object.entries(paramMap)

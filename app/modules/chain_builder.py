@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import asyncio
 from dataclasses import dataclass, field
@@ -8,34 +8,33 @@ from app.core.llm_gateway import llm_gateway
 logger = logging.getLogger("burpnake.chain")
 
 KNOWN_CHAINS = [
-    # (Same as before)
     {
         "name": "OAuth Account Takeover",
         "requires": ["open_redirect", "oauth_csrf_missing_state"],
         "severity": "critical",
         "description": "Open Redirect + OAuth state eksikligi = Token theft ile hesap ele gecirme",
-        "bounty_estimate": ",000 - ,000",
+        "bounty_estimate": "$5,000 - $25,000",
     },
     {
         "name": "SSRF to Cloud Takeover",
         "requires": ["ssrf_candidate", "cloud_metadata_ssrf_candidate"],
         "severity": "critical",
         "description": "SSRF ile cloud metadata erisimi = AWS/GCP key sizintisi ile tam kontrol",
-        "bounty_estimate": ",000 - ,000",
+        "bounty_estimate": "$10,000 - $50,000",
     },
     {
         "name": "XSS to Account Takeover",
         "requires": ["xss_candidate", "cors_misconfig"],
         "severity": "critical",
         "description": "XSS + CORS misconfiguration = Cookie/token calma ile hesap ele gecirme",
-        "bounty_estimate": ",000 - ,000",
+        "bounty_estimate": "$5,000 - $20,000",
     },
     {
         "name": "IDOR + Info Disclosure",
         "requires": ["idor_candidate", "sensitive_data_exposure"],
         "severity": "critical",
         "description": "IDOR ile diger kullanicilarin hassas verilerine erisim",
-        "bounty_estimate": ",000 - ,000",
+        "bounty_estimate": "$2,500 - $15,000",
     }
 ]
 
@@ -139,13 +138,13 @@ If YES, output ONLY a JSON:
   "name": "Chain Name (e.g. Account Takeover via XSS and CSRF)",
   "severity": "critical",
   "description": "How they combine",
-  "bounty_estimate": "",
+  "bounty_estimate": "$5,000 - $25,000",
   "poc_python": "Python requests code demonstrating the multi-step chain"
 }}
 If NO, output {{"chain_possible": false}}.'''
         
         try:
-            resp = await llm_gateway.generate([{"role": "user", "content": prompt}], temperature=0.2)
+            resp = await llm_gateway.generate(prompt, temperature=0.2)
             import re
             m = re.search(r'\{[\s\S]*\}', resp)
             if m:

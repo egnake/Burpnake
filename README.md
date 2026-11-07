@@ -86,19 +86,19 @@ Before installing BurpNake, ensure your system meets the following requirements:
 The fastest and most reliable way to deploy the entire stack is using Docker Compose.
 
 1.  **Clone the repository:**
-    `ash
+    ```bash
     git clone https://github.com/egnake/Burpnake.git
     cd Burpnake
-    `
+    ```
 2.  **Prepare the environment variables:**
-    `ash
+    ```bash
     cp .env.example .env
-    `
-    Open the .env file in a text editor and configure your preferred LLM credentials (e.g., GEMINI_API_KEY or OLLAMA_BASE_URL).
+    ```
+    Open the `.env` file in a text editor and configure your preferred LLM credentials (e.g., `GEMINI_API_KEY` or `OLLAMA_BASE_URL`).
 3.  **Build and start the containers:**
-    `ash
-    docker-compose up --build
-    `
+    ```bash
+    docker compose up --build
+    ```
 4.  **Access the application:**
     *   Dashboard: http://localhost:3000
     *   Backend API Docs: http://localhost:8899/docs
@@ -110,38 +110,38 @@ If you prefer to run the applications directly on your host machine, follow thes
 #### 1. Backend Setup (FastAPI)
 1.  Clone the repository and navigate to the root directory.
 2.  Create a virtual Python environment to isolate dependencies:
-    `ash
+    ```bash
     python -m venv venv
-    `
+    ```
 3.  Activate the virtual environment:
-    *   **Windows:** .\venv\Scripts\activate
-    *   **Linux / macOS:** source venv/bin/activate
+    *   **Windows:** `.\venv\Scripts\activate`
+    *   **Linux / macOS:** `source venv/bin/activate`
 4.  Install the required Python packages:
-    `ash
+    ```bash
     pip install -r requirements.txt
-    `
+    ```
 5.  Configure the environment variables:
-    *   Copy the .env.example file and rename it to .env.
-    *   Edit .env to include your API keys.
+    *   Copy the `.env.example` file and rename it to `.env`.
+    *   Edit `.env` to include your API keys.
 6.  Start the backend server:
-    `ash
+    ```bash
     python run.py
-    `
+    ```
     The backend API will start on http://localhost:8899.
 
 #### 2. Frontend Setup (React + Vite)
-1.  Open a new terminal window and navigate to the rontend directory:
-    `ash
+1.  Open a new terminal window and navigate to the `frontend` directory:
+    ```bash
     cd frontend
-    `
+    ```
 2.  Install the Node.js dependencies:
-    `ash
+    ```bash
     npm install
-    `
+    ```
 3.  Start the frontend development server:
-    `ash
+    ```bash
     npm run dev
-    `
+    ```
     The frontend dashboard will start on http://localhost:3000.
 
 #### 3. Burp Suite Extension Setup

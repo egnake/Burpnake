@@ -14,21 +14,23 @@ export default function ScopeManager() {
 
   // Sayfa yüklendiğinde mevcut scope'u çek
   useEffect(() => {
-    fetchCurrentScope();
+    let active = true;
+    axios
+      .get('/api/scope/current')
+      .then(res => {
+        if (active && res.data.program_name) {
+          setProgramName(res.data.program_name);
+          setIncludeDomains(res.data.includes || res.data.include_rules || []);
+          setExcludeDomains(res.data.excludes || res.data.exclude_rules || []);
+        }
+      })
+      .catch(err => {
+        console.error("Scope fetch error", err);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const fetchCurrentScope = async () => {
-    try {
-      const res = await axios.get('/api/scope/current');
-      if (res.data.program_name) {
-        setProgramName(res.data.program_name);
-        setIncludeDomains(res.data.includes || res.data.include_rules || []);
-        setExcludeDomains(res.data.excludes || res.data.exclude_rules || []);
-      }
-    } catch (err) {
-      console.error("Scope fetch error", err);
-    }
-  };
 
   const addDomain = (type) => {
     if (type === 'include' && includeDomain) {
@@ -68,7 +70,7 @@ export default function ScopeManager() {
         exclude_domains: excludeDomains
       });
       setMessage({ type: 'success', text: 'Scope successfully saved and updated in backend.' });
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Failed to save scope.' });
     } finally {
       setLoading(false);

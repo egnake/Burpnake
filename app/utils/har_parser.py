@@ -51,19 +51,34 @@ def _parse_entry(entry: dict, idx: int) -> HttpExchange:
         elif h.name.lower() == "cookie":
             cookies = h.value
 
+    req_method = req_data.get("method", "GET")
+    req_path = parsed_url.path + ("?" + parsed_url.query if parsed_url.query else "") or "/"
+    req_host = parsed_url.hostname or ""
+    req_ver = req_data.get("httpVersion", "HTTP/1.1")
+    raw_req_lines = [f"{req_method} {req_path} {req_ver}"]
+    if req_host and not any(h.name.lower() == "host" for h in headers):
+        raw_req_lines.append(f"Host: {req_host}")
+    for h in headers:
+        raw_req_lines.append(f"{h.name}: {h.value}")
+    raw_req_lines.append("")
+    if body:
+        raw_req_lines.append(body)
+    raw_req = "\r\n".join(raw_req_lines)
+
     request = HttpRequest(
-        id=idx,
-        method=req_data.get("method", "GET"),
+        id=str(idx),
+        method=req_method,
         url=req_data.get("url", ""),
-        path=parsed_url.path + ("?" + parsed_url.query if parsed_url.query else ""),
-        host=parsed_url.hostname or "",
+        path=req_path,
+        host=req_host,
         port=parsed_url.port or (443 if parsed_url.scheme == "https" else 80),
         protocol=parsed_url.scheme or "https",
-        http_version=req_data.get("httpVersion", "HTTP/1.1"),
+        http_version=req_ver,
         headers=headers,
         body=body,
         content_type=content_type,
         cookies=cookies,
+        raw=raw_req,
     )
 
     # Parse response
@@ -75,19 +90,31 @@ def _parse_entry(entry: dict, idx: int) -> HttpExchange:
     resp_content = resp_data.get("content", {})
     resp_body = resp_content.get("text", "")
     resp_ct = resp_content.get("mimeType", "")
+    resp_status = resp_data.get("status", 0)
+    resp_status_text = resp_data.get("statusText", "")
+    resp_ver = resp_data.get("httpVersion", "HTTP/1.1")
+
+    raw_resp_lines = [f"{resp_ver} {resp_status} {resp_status_text}".strip()]
+    for h in resp_headers:
+        raw_resp_lines.append(f"{h.name}: {h.value}")
+    raw_resp_lines.append("")
+    if resp_body:
+        raw_resp_lines.append(resp_body)
+    raw_resp = "\r\n".join(raw_resp_lines)
 
     response = HttpResponse(
-        status_code=resp_data.get("status", 0),
-        status_text=resp_data.get("statusText", ""),
-        http_version=resp_data.get("httpVersion", "HTTP/1.1"),
+        status_code=resp_status,
+        status_text=resp_status_text,
+        http_version=resp_ver,
         headers=resp_headers,
         body=resp_body,
         content_type=resp_ct,
         content_length=resp_content.get("size", 0),
+        raw=raw_resp,
     )
 
     return HttpExchange(
-        id=idx,
+        id=str(idx),
         request=request,
         response=response,
         source="har_import",

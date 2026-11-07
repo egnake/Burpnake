@@ -46,6 +46,8 @@ class GeminiProvider:
         use_pro: bool = False,
     ) -> str:
         """Send a chat completion request to Gemini."""
+        if not self.api_key:
+            raise RuntimeError("Gemini API key not configured")
         self._configure()
 
         model_name = (

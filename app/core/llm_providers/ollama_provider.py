@@ -1,6 +1,7 @@
 """Ollama LLM provider - Primary (local, free, private)."""
 
 from __future__ import annotations
+import asyncio
 import httpx
 import json
 from typing import AsyncIterator, Optional
@@ -20,13 +21,20 @@ class OllamaProvider:
         self.fallback_model = fallback_model
         self.name = "ollama"
         self._client: Optional[httpx.AsyncClient] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     async def _get_client(self) -> httpx.AsyncClient:
-        if self._client is None or self._client.is_closed:
+        current_loop = asyncio.get_running_loop()
+        if (
+            self._client is None
+            or self._client.is_closed
+            or self._loop is not current_loop
+        ):
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                timeout=httpx.Timeout(120.0, connect=10.0),
+                timeout=httpx.Timeout(90.0, connect=5.0),
             )
+            self._loop = current_loop
         return self._client
 
     async def is_available(self) -> bool:
@@ -69,13 +77,19 @@ class OllamaProvider:
             resp.raise_for_status()
             data = resp.json()
             return data.get("message", {}).get("content", "")
-        except Exception as e:
-            # Try fallback model
-            if use_model != self.fallback_model:
+        except httpx.HTTPStatusError as e:
+            # Try fallback model only when primary model is missing (404)
+            if (
+                e.response is not None
+                and e.response.status_code == 404
+                and use_model != self.fallback_model
+            ):
                 return await self.chat(
                     messages, temperature, model=self.fallback_model
                 )
-            raise RuntimeError(f"Ollama error: {e}") from e
+            raise RuntimeError(f"Ollama HTTP {e.response.status_code}: {e}") from e
+        except Exception as e:
+            raise RuntimeError(f"Ollama error ({type(e).__name__}): {e}") from e
 
     async def generate(
         self,

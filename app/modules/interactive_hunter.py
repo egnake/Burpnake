@@ -55,6 +55,7 @@ class InteractiveHunter:
         if len(self.conversations[session_id]) <= 2:
             scope_info = scope_manager.get_scope_summary()
             import_info = burp_importer.get_summary()
+            available_ex = burp_importer.get_exchanges()
             context = f"""
 [Session Context]
 Scope: {scope_info}
@@ -62,7 +63,7 @@ Imported Data: {import_info.get('total_exchanges', 0)} exchanges,
 Methods: {import_info.get('methods', {})}, 
 Hosts: {import_info.get('unique_hosts', [])}
 
-Available exchange IDs: {[e.id for e in burp_importer.exchanges[:50]]}
+Available exchange IDs: {[e.id for e in available_ex[:50]]}
 """
             self.conversations[session_id].append(
                 {"role": "system", "content": context}
@@ -94,7 +95,7 @@ Available exchange IDs: {[e.id for e in burp_importer.exchanges[:50]]}
         if session_id not in self.conversations:
             session_id = self.new_session(session_id)
 
-        exchanges = burp_importer.exchanges
+        exchanges = burp_importer.get_exchanges()
         if not exchanges:
             return "No exchanges imported yet. Please import Burp data first."
 

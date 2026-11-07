@@ -38,11 +38,26 @@ def parse_burp_xml(xml_content: str | bytes) -> list[HttpExchange]:
     exchanges: list[HttpExchange] = []
 
     try:
-        root = etree.fromstring(xml_content)
+        safe_parser = etree.XMLParser(
+            resolve_entities=False,
+            no_network=True,
+            dtd_validation=False,
+            load_dtd=False,
+        )
+        root = etree.fromstring(xml_content, parser=safe_parser)
     except etree.XMLSyntaxError:
-        # Try parsing with recovery mode
-        parser = etree.XMLParser(recover=True)
-        root = etree.fromstring(xml_content, parser=parser)
+        # Try parsing with recovery mode (XXE protection still enforced)
+        recovery_parser = etree.XMLParser(
+            recover=True,
+            resolve_entities=False,
+            no_network=True,
+            dtd_validation=False,
+            load_dtd=False,
+        )
+        root = etree.fromstring(xml_content, parser=recovery_parser)
+
+    if root is None:
+        return exchanges
 
     items = root.findall(".//item")
 
@@ -87,7 +102,7 @@ def _parse_item(item: etree._Element, idx: int) -> HttpExchange:
     # Override with XML metadata
     _el = lambda tag: (item.findtext(tag) or "").strip()
 
-    request.id = idx
+    request.id = str(idx)
     request.method = _el("method") or request.method
     request.path = _el("path") or request.path
     request.host = _el("host") or request.host
@@ -112,7 +127,7 @@ def _parse_item(item: etree._Element, idx: int) -> HttpExchange:
             pass
 
     return HttpExchange(
-        id=idx,
+        id=str(idx),
         request=request,
         response=response,
         source="burp_import",
